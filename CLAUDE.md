@@ -36,7 +36,7 @@ Dueño: Jacob | Ubuntu 24.04 | Acer Nitro 5
 - [x] MySQL MCP configurado
 - [x] Obsidian + obsidian-git configurado
 - [x] Backend inicializado
-- [ ] Frontend inicializado
+- [x] Frontend inicializado
 - [x] Tablas MySQL creadas
 - [ ] App funcionando en localhost
 
