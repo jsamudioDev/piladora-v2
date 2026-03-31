@@ -30,7 +30,10 @@ model Producto {
   nombre        String
   unidad        String
   stockActual   Float             @default(0)
+  stockLocal    Float             @default(0)
   stockMinimo   Float             @default(0)
+  ubicacion     String            @default("piladora")
+  categoria     String            @default("grano")
   createdAt     DateTime          @default(now())
   movimientos   StockMovimiento[]
   detallesVenta DetalleVenta[]
