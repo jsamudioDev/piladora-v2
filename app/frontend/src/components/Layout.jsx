@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const NAV_ITEMS = [
   { id: 'panel',  label: 'Panel',  icon: '📊' },
@@ -9,8 +10,9 @@ const NAV_ITEMS = [
   { id: 'config', label: 'Config', icon: '⚙️' },
 ];
 
-export default function Layout({ children, activeModule, onNavigate }) {
+export default function Layout({ children, activeModule }) {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="layout">
@@ -34,7 +36,7 @@ export default function Layout({ children, activeModule, onNavigate }) {
               <button
                 className={`nav-item${activeModule === item.id ? ' nav-item--active' : ''}`}
                 onClick={() => {
-                  onNavigate?.(item.id);
+                  navigate(`/${item.id}`);
                   setOpen(false);
                 }}
               >
