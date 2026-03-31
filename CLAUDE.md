@@ -35,10 +35,10 @@ Dueño: Jacob | Ubuntu 24.04 | Acer Nitro 5
 - [x] GitHub MCP configurado
 - [x] MySQL MCP configurado
 - [x] Obsidian + obsidian-git configurado
-- [ ] Backend inicializado
+- [x] Backend inicializado
 - [ ] Frontend inicializado
-- [ ] Tablas MySQL creadas
+- [x] Tablas MySQL creadas
 - [ ] App funcionando en localhost
 
 ## Próximo paso
-Inicializar el backend con Node.js + Express + Prisma
+Inicializar el frontend con React + Vite

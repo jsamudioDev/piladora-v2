@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── MÓDULO: CONFIG ───────────────────────────────────────────────────────────
+
+model Operario {
+  id        Int       @id @default(autoincrement())
+  nombre    String
+  activo    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  pilados   Pilado[]
+}
+
+model Parametro {
+  id    Int    @id @default(autoincrement())
+  clave String @unique
+  valor String
+}
+
+// ─── MÓDULO: STOCK ────────────────────────────────────────────────────────────
+
+model Producto {
+  id            Int               @id @default(autoincrement())
+  nombre        String
+  unidad        String
+  stockActual   Float             @default(0)
+  stockMinimo   Float             @default(0)
+  createdAt     DateTime          @default(now())
+  movimientos   StockMovimiento[]
+  detallesVenta DetalleVenta[]
+}
+
+model StockMovimiento {
+  id         Int      @id @default(autoincrement())
+  productoId Int
+  tipo       String
+  cantidad   Float
+  motivo     String?
+  createdAt  DateTime @default(now())
+  producto   Producto @relation(fields: [productoId], references: [id])
+}
+
+// ─── MÓDULO: VENTA ────────────────────────────────────────────────────────────
+
+model Venta {
+  id         Int            @id @default(autoincrement())
+  total      Float
+  metodoPago String
+  nota       String?
+  createdAt  DateTime       @default(now())
+  detalles   DetalleVenta[]
+}
+
+model DetalleVenta {
+  id         Int      @id @default(autoincrement())
+  ventaId    Int
+  productoId Int
+  cantidad   Float
+  precioUnit Float
+  subtotal   Float
+  venta      Venta    @relation(fields: [ventaId], references: [id])
+  producto   Producto @relation(fields: [productoId], references: [id])
+}
+
+// ─── MÓDULO: PILAR ────────────────────────────────────────────────────────────
+
+model Pilado {
+  id               Int      @id @default(autoincrement())
+  operarioId       Int
+  qqEntrada   Float
+  rendimiento Float
+  qqSalida    Float
+  nota             String?
+  createdAt        DateTime @default(now())
+  operario         Operario @relation(fields: [operarioId], references: [id])
+}
+
+// ─── MÓDULO: DINERO ───────────────────────────────────────────────────────────
+
+model Ingreso {
+  id          Int      @id @default(autoincrement())
+  monto       Float
+  descripcion String
+  categoria   String?
+  createdAt   DateTime @default(now())
+}
+
+model Egreso {
+  id          Int      @id @default(autoincrement())
+  monto       Float
+  descripcion String
+  categoria   String?
+  createdAt   DateTime @default(now())
+}
