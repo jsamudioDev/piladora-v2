@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
+import Venta from './pages/Venta/Venta';
+import Pilar from './pages/Pilar/Pilar';
 import Stock from './pages/Stock/Stock';
 import Config from './pages/Config/Config';
 import './App.css';
@@ -26,8 +28,8 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<Navigate to="/panel" replace />} />
       <Route path="/panel"  element={<Layout activeModule="panel"><Placeholder nombre="Panel" /></Layout>} />
-      <Route path="/venta"  element={<Layout activeModule="venta"><Placeholder nombre="Venta" /></Layout>} />
-      <Route path="/pilar"  element={<Layout activeModule="pilar"><Placeholder nombre="Pilar" /></Layout>} />
+      <Route path="/venta"  element={<Layout activeModule="venta"><Venta /></Layout>} />
+      <Route path="/pilar"  element={<Layout activeModule="pilar"><Pilar /></Layout>} />
       <Route path="/stock"  element={<Layout activeModule="stock"><Stock /></Layout>} />
       <Route path="/dinero" element={<Layout activeModule="dinero"><Placeholder nombre="Dinero" /></Layout>} />
       <Route path="/config" element={<Layout activeModule="config"><Config /></Layout>} />

@@ -56,6 +56,9 @@ model Venta {
   total      Float
   metodoPago String
   nota       String?
+  cliente    String?
+  ubicacion  String         @default("piladora")
+  ingresoId  Int?
   createdAt  DateTime       @default(now())
   detalles   DetalleVenta[]
 }
@@ -76,9 +79,17 @@ model DetalleVenta {
 model Pilado {
   id               Int      @id @default(autoincrement())
   operarioId       Int
-  qqEntrada   Float
-  rendimiento Float
-  qqSalida    Float
+  qqEntrada        Float
+  tandas           Int      @default(0)
+  sacosPilado      Float    @default(0)
+  sacosSubproducto Float    @default(0)
+  horaInicio       String   @default("")
+  horaFin          String   @default("")
+  horas            Float    @default(0)
+  rendimiento      Float    @default(0)
+  velocidad        Float    @default(0)
+  costoEstimado    Float    @default(0)
+  egresoId         Int?
   nota             String?
   createdAt        DateTime @default(now())
   operario         Operario @relation(fields: [operarioId], references: [id])
@@ -91,6 +102,7 @@ model Ingreso {
   monto       Float
   descripcion String
   categoria   String?
+  ventaId     Int?
   createdAt   DateTime @default(now())
 }
 
