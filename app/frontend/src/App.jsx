@@ -1,5 +1,9 @@
+// ─── App principal con autenticación ─────────────────────────────────────────
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import Login  from './pages/Login/Login';
 import Panel  from './pages/Panel/Panel';
 import Venta  from './pages/Venta/Venta';
 import Pilar  from './pages/Pilar/Pilar';
@@ -10,23 +14,62 @@ import './App.css';
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppRoutes />
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/"       element={<Navigate to="/panel" replace />} />
-      <Route path="/panel"  element={<Layout activeModule="panel"><Panel /></Layout>} />
-      <Route path="/venta"  element={<Layout activeModule="venta"><Venta /></Layout>} />
-      <Route path="/pilar"  element={<Layout activeModule="pilar"><Pilar /></Layout>} />
-      <Route path="/stock"  element={<Layout activeModule="stock"><Stock /></Layout>} />
-      <Route path="/dinero" element={<Layout activeModule="dinero"><Dinero /></Layout>} />
-      <Route path="/config" element={<Layout activeModule="config"><Config /></Layout>} />
-      <Route path="*"       element={<Navigate to="/panel" replace />} />
+      {/* Ruta pública: Login */}
+      <Route path="/login" element={<Login />} />
+
+      {/* Rutas protegidas: requieren autenticación */}
+      <Route path="/" element={<Navigate to="/panel" replace />} />
+
+      <Route path="/panel" element={
+        <ProtectedRoute>
+          <Layout activeModule="panel"><Panel /></Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/venta" element={
+        <ProtectedRoute>
+          <Layout activeModule="venta"><Venta /></Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/pilar" element={
+        <ProtectedRoute>
+          <Layout activeModule="pilar"><Pilar /></Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/stock" element={
+        <ProtectedRoute>
+          <Layout activeModule="stock"><Stock /></Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/dinero" element={
+        <ProtectedRoute>
+          <Layout activeModule="dinero"><Dinero /></Layout>
+        </ProtectedRoute>
+      } />
+
+      {/* Config: solo admin */}
+      <Route path="/config" element={
+        <ProtectedRoute requireAdmin>
+          <Layout activeModule="config"><Config /></Layout>
+        </ProtectedRoute>
+      } />
+
+      {/* Catch-all */}
+      <Route path="*" element={<Navigate to="/panel" replace />} />
     </Routes>
   );
 }

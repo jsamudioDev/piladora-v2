@@ -1,5 +1,7 @@
+// ─── Layout principal con sidebar, usuario y logout ─────────────────────────
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const NAV_ITEMS = [
   { id: 'panel',  label: 'Panel',  icon: '📊' },
@@ -7,12 +9,21 @@ const NAV_ITEMS = [
   { id: 'pilar',  label: 'Pilar',  icon: '⚙️' },
   { id: 'stock',  label: 'Stock',  icon: '📦' },
   { id: 'dinero', label: 'Dinero', icon: '💰' },
-  { id: 'config', label: 'Config', icon: '⚙️' },
+  { id: 'config', label: 'Config', icon: '⚙️', adminOnly: true },
 ];
 
 export default function Layout({ children, activeModule }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { usuario, logout, esAdmin } = useAuth();
+
+  // Filtrar items de navegación según rol
+  const navItems = NAV_ITEMS.filter(item => !item.adminOnly || esAdmin);
+
+  function handleLogout() {
+    logout();
+    navigate('/login', { replace: true });
+  }
 
   return (
     <div className="layout">
@@ -22,6 +33,11 @@ export default function Layout({ children, activeModule }) {
           {open ? '✕' : '☰'}
         </button>
         <span className="logo">Piladora</span>
+        <div className="mobile-user">
+          <span className={`role-badge role-badge--${usuario?.rol?.toLowerCase()}`}>
+            {usuario?.rol}
+          </span>
+        </div>
       </header>
 
       {/* Overlay móvil */}
@@ -30,8 +46,9 @@ export default function Layout({ children, activeModule }) {
       {/* Sidebar */}
       <nav className={`sidebar${open ? ' sidebar--open' : ''}`}>
         <div className="sidebar-logo">Piladora</div>
+
         <ul className="nav-list">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <li key={item.id}>
               <button
                 className={`nav-item${activeModule === item.id ? ' nav-item--active' : ''}`}
@@ -46,6 +63,24 @@ export default function Layout({ children, activeModule }) {
             </li>
           ))}
         </ul>
+
+        {/* Info del usuario y logout */}
+        <div className="sidebar-footer">
+          <div className="user-info">
+            <div className="user-avatar">
+              {usuario?.nombre?.charAt(0)?.toUpperCase() || '?'}
+            </div>
+            <div className="user-details">
+              <span className="user-name">{usuario?.nombre}</span>
+              <span className={`role-badge role-badge--${usuario?.rol?.toLowerCase()}`}>
+                {usuario?.rol === 'ADMIN' ? 'Admin' : 'Vendedor'}
+              </span>
+            </div>
+          </div>
+          <button className="logout-btn" onClick={handleLogout} title="Cerrar sesión">
+            ↪
+          </button>
+        </div>
       </nav>
 
       {/* Contenido principal */}
@@ -86,6 +121,12 @@ export default function Layout({ children, activeModule }) {
           font-size: 18px;
           font-weight: 600;
           color: var(--accent-purple);
+          flex: 1;
+        }
+        .mobile-user {
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
 
         /* Overlay */
@@ -126,6 +167,7 @@ export default function Layout({ children, activeModule }) {
           display: flex;
           flex-direction: column;
           gap: 2px;
+          flex: 1;
         }
         .nav-item {
           width: 100%;
@@ -152,6 +194,85 @@ export default function Layout({ children, activeModule }) {
         }
         .nav-icon { font-size: 16px; }
         .nav-label { font-weight: 500; }
+
+        /* Sidebar footer — usuario + logout */
+        .sidebar-footer {
+          padding: 12px;
+          border-top: 1px solid var(--border);
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .user-info {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-width: 0;
+        }
+        .user-avatar {
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+          color: #fff;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 700;
+          font-size: 14px;
+          flex-shrink: 0;
+        }
+        .user-details {
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
+        }
+        .user-name {
+          font-size: 13px;
+          font-weight: 600;
+          color: var(--text-primary);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .role-badge {
+          font-size: 10px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          padding: 1px 6px;
+          border-radius: 4px;
+          width: fit-content;
+        }
+        .role-badge--admin {
+          background: rgba(239, 68, 68, 0.2);
+          color: #f87171;
+        }
+        .role-badge--vendedor {
+          background: rgba(34, 197, 94, 0.2);
+          color: #4ade80;
+        }
+        .logout-btn {
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.1);
+          color: var(--text-secondary);
+          width: 34px;
+          height: 34px;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.15s, color 0.15s;
+          flex-shrink: 0;
+        }
+        .logout-btn:hover {
+          background: rgba(239, 68, 68, 0.15);
+          color: #f87171;
+          border-color: rgba(239, 68, 68, 0.3);
+        }
 
         /* Main */
         .main-content {

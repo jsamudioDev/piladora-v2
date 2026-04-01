@@ -7,6 +7,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── MÓDULO: AUTH ────────────────────────────────────────────────────────────
+
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  nombre    String
+  email     String   @unique
+  password  String
+  rol       String   @default("VENDEDOR") // ADMIN | VENDEDOR
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  ventas    Venta[]
+}
+
 // ─── MÓDULO: CONFIG ───────────────────────────────────────────────────────────
 
 model Operario {
@@ -59,8 +72,10 @@ model Venta {
   cliente    String?
   ubicacion  String         @default("piladora")
   ingresoId  Int?
+  usuarioId  Int?
   createdAt  DateTime       @default(now())
   detalles   DetalleVenta[]
+  usuario    Usuario?       @relation(fields: [usuarioId], references: [id])
 }
 
 model DetalleVenta {
