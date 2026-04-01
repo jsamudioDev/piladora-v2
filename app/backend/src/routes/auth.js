@@ -4,9 +4,13 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../prisma');
 const { authMiddleware, requireAdmin, JWT_SECRET } = require('../middleware/auth');
+const { loginLimiter }                             = require('../middleware/security');
+const { validateLogin, validateRegistro }          = require('../middleware/validators');
 
 // ─── POST /api/auth/login — Iniciar sesión ──────────────────────────────────
-router.post('/login', async (req, res) => {
+// loginLimiter: máx 5 intentos por IP cada 15 min (evita fuerza bruta)
+// validateLogin: verifica email válido + password mínimo 6 chars
+router.post('/login', loginLimiter, validateLogin, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -59,7 +63,8 @@ router.get('/me', authMiddleware, async (req, res) => {
 });
 
 // ─── POST /api/auth/registro — Crear nuevo usuario (solo ADMIN) ──────────────
-router.post('/registro', authMiddleware, requireAdmin, async (req, res) => {
+// validateRegistro: nombre, email, password mínimo 8 chars, rol válido
+router.post('/registro', authMiddleware, requireAdmin, validateRegistro, async (req, res) => {
   try {
     const { nombre, email, password, rol } = req.body;
 

@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const prisma  = require('../prisma');
+const { validateVenta } = require('../middleware/validators');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function hoy() {
@@ -40,7 +41,8 @@ router.get('/hoy', async (req, res) => {
 });
 
 // POST /api/ventas — crear venta
-router.post('/', async (req, res) => {
+// validateVenta: total > 0, metodoPago no vacío, detalles array con al menos 1 item
+router.post('/', validateVenta, async (req, res) => {
   try {
     const { metodoPago, nota, cliente, ubicacion = 'piladora', detalles } = req.body;
 

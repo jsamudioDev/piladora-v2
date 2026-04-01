@@ -1,12 +1,37 @@
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
-const { authMiddleware } = require('./middleware/auth');
+const cors    = require('cors');
+const { authMiddleware }              = require('./middleware/auth');
+const { helmetConfig, apiLimiter }    = require('./middleware/security');
 
 const app = express();
 
-// ─── Middleware global ───────────────────────────────────────────────────────
-app.use(cors());
+// ─── CORS restrictivo ─────────────────────────────────────────────────────────
+// Solo se aceptan peticiones desde los orígenes autorizados.
+// En desarrollo: localhost:5173 (Vite). En producción: Vercel.
+// Se lee desde la variable de entorno ALLOWED_ORIGINS (separada por comas)
+// o se usan los defaults si no está definida.
+const originsEnv = process.env.ALLOWED_ORIGINS || '';
+const allowedOrigins = originsEnv
+  ? originsEnv.split(',').map(o => o.trim())
+  : ['http://localhost:5173', 'https://piladora-v2.vercel.app'];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    // Permitir requests sin origin (Postman, curl, misma máquina)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`Origen no permitido por CORS: ${origin}`));
+    }
+  },
+  credentials: true,
+};
+
+// ─── Middleware global ────────────────────────────────────────────────────────
+// helmet va primero: pone los headers de seguridad HTTP antes que todo
+app.use(helmetConfig);
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // ─── Ruta pública: Health check ──────────────────────────────────────────────
@@ -17,18 +42,20 @@ app.get('/health', (req, res) => {
 // ─── Rutas públicas: Autenticación (login no requiere token) ─────────────────
 app.use('/api/auth', require('./routes/auth'));
 
-// ─── Middleware: Proteger todas las rutas de la API con JWT ──────────────────
+// ─── Rate limiting + JWT para todas las rutas /api ───────────────────────────
+// apiLimiter: 100 requests/min por IP antes de verificar el token
+app.use('/api', apiLimiter);
 app.use('/api', authMiddleware);
 
-// ─── Rutas protegidas (requieren token válido) ──────────────────────────────
-app.use('/api/ventas', require('./routes/ventas'));
-app.use('/api/stock', require('./routes/stock'));
+// ─── Rutas protegidas (requieren token válido) ────────────────────────────────
+app.use('/api/ventas',  require('./routes/ventas'));
+app.use('/api/stock',   require('./routes/stock'));
 app.use('/api/pilados', require('./routes/pilados'));
-app.use('/api/dinero', require('./routes/dinero'));
-app.use('/api/config', require('./routes/config'));
-app.use('/api/panel', require('./routes/panel'));
+app.use('/api/dinero',  require('./routes/dinero'));
+app.use('/api/config',  require('./routes/config'));
+app.use('/api/panel',   require('./routes/panel'));
 
-// ─── Iniciar servidor ───────────────────────────────────────────────────────
+// ─── Iniciar servidor ─────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);

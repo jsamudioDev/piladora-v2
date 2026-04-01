@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const prisma = require('../prisma');
+const { validateEgreso } = require('../middleware/validators');
 
 const CATEGORIAS_VALIDAS = ['Compra Maíz', 'Flete', 'Salarios', 'Mantenimiento', 'Otro'];
 
@@ -94,7 +95,8 @@ router.get('/egresos', async (req, res) => {
 });
 
 // POST /api/dinero/egresos
-router.post('/egresos', async (req, res) => {
+// validateEgreso: monto > 0, descripcion y categoria no vacíos
+router.post('/egresos', validateEgreso, async (req, res) => {
   try {
     const { monto, descripcion, categoria } = req.body;
     if (!monto || Number(monto) <= 0) {

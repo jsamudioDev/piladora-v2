@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const prisma  = require('../prisma');
+const { validatePilado } = require('../middleware/validators');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function hoy() {
@@ -102,7 +103,8 @@ router.get('/stats', async (req, res) => {
 });
 
 // POST /api/pilados — registrar pilado
-router.post('/', async (req, res) => {
+// validatePilado: operarioId entero, qqEntrada > 0
+router.post('/', validatePilado, async (req, res) => {
   try {
     const {
       operarioId, qqEntrada, tandas,

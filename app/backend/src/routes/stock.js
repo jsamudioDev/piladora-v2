@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const prisma = require('../prisma');
+const { validateProducto, validateMovimiento } = require('../middleware/validators');
 
 // GET /api/stock — todos los productos
 router.get('/', async (req, res) => {
@@ -26,7 +27,8 @@ router.get('/alertas', async (req, res) => {
 });
 
 // POST /api/stock/productos — crear producto
-router.post('/productos', async (req, res) => {
+// validateProducto: nombre y unidad no vacíos, stockMinimo >= 0
+router.post('/productos', validateProducto, async (req, res) => {
   try {
     const { nombre, unidad, stockActual, stockLocal, stockMinimo, ubicacion, categoria } = req.body;
     const producto = await prisma.producto.create({
@@ -47,7 +49,8 @@ router.post('/productos', async (req, res) => {
 });
 
 // PUT /api/stock/productos/:id — actualizar producto
-router.put('/productos/:id', async (req, res) => {
+// validateProducto: nombre y unidad no vacíos, stockMinimo >= 0
+router.put('/productos/:id', validateProducto, async (req, res) => {
   try {
     const id = Number(req.params.id);
     const { nombre, unidad, stockActual, stockLocal, stockMinimo, ubicacion, categoria } = req.body;
@@ -70,7 +73,8 @@ router.put('/productos/:id', async (req, res) => {
 });
 
 // POST /api/stock/movimiento — registrar entrada o salida
-router.post('/movimiento', async (req, res) => {
+// validateMovimiento: productoId entero, tipo ENTRADA/SALIDA, cantidad > 0
+router.post('/movimiento', validateMovimiento, async (req, res) => {
   try {
     const { productoId, tipo, cantidad, motivo } = req.body;
     if (!['ENTRADA', 'SALIDA'].includes(tipo)) {
