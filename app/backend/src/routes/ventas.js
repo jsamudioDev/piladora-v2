@@ -2,6 +2,7 @@ const router = require('express').Router();
 const prisma  = require('../prisma');
 const { validateVenta }  = require('../middleware/validators');
 const { registrar }      = require('../services/bitacoraService');
+const { requireRol }     = require('../middleware/permisos');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function hoy() {
@@ -159,6 +160,120 @@ router.delete('/:id', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── GET /api/ventas/:id/ticket — Datos completos para imprimir ticket ────────
+router.get('/:id/ticket', requireRol('ADMIN', 'VENDEDOR'), async (req, res) => {
+  try {
+    const venta = await prisma.venta.findUnique({
+      where: { id: Number(req.params.id) },
+      include: {
+        detalles: { include: { producto: true } },
+        usuario:  { select: { nombre: true } },
+      },
+    });
+    if (!venta) return res.status(404).json({ error: 'Venta no encontrada' });
+
+    // Obtener parámetros de la empresa
+    const params = await prisma.parametro.findMany({
+      where: { clave: { in: ['nombre_empresa', 'ruc_empresa', 'direccion_empresa', 'telefono_empresa', 'itbms_porcentaje'] } },
+    });
+    const empresa = Object.fromEntries(params.map(p => [p.clave, p.valor]));
+
+    res.json({ venta, empresa });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener datos del ticket' });
+  }
+});
+
+// ─── POST /api/ventas/:id/factura — Asignar número correlativo de factura ─────
+// Solo ADMIN
+router.post('/:id/factura', requireRol('ADMIN'), async (req, res) => {
+  try {
+    const { clienteNombre, clienteRuc, clienteDireccion, aplicaITBMS } = req.body;
+    const ventaId = Number(req.params.id);
+
+    // Verificar que la venta existe y no tiene factura aún
+    const venta = await prisma.venta.findUnique({ where: { id: ventaId } });
+    if (!venta) return res.status(404).json({ error: 'Venta no encontrada' });
+    if (venta.facturaNum) {
+      return res.status(409).json({ error: 'Esta venta ya tiene factura asignada', facturaNum: venta.facturaNum });
+    }
+
+    // Incrementar correlativo y actualizar la venta en una sola transacción
+    const resultado = await prisma.$transaction(async (tx) => {
+      const param    = await tx.parametro.findUnique({ where: { clave: 'ultimo_num_factura' } });
+      const nuevoNum = (parseInt(param?.valor) || 0) + 1;
+
+      await tx.parametro.update({
+        where: { clave: 'ultimo_num_factura' },
+        data:  { valor: String(nuevoNum) },
+      });
+
+      const ventaActualizada = await tx.venta.update({
+        where: { id: ventaId },
+        data: {
+          facturaNum:       nuevoNum,
+          cliente:          clienteNombre  || venta.cliente,
+          clienteRuc:       clienteRuc     || null,
+          clienteDireccion: clienteDireccion || null,
+          aplicaITBMS:      aplicaITBMS === true,
+        },
+        include: {
+          detalles: { include: { producto: true } },
+          usuario:  { select: { nombre: true } },
+        },
+      });
+
+      return { ventaActualizada, nuevoNum };
+    });
+
+    registrar({
+      usuarioId: req.usuario.id,
+      nombre:    req.usuario.nombre,
+      modulo:    'venta',
+      accion:    'factura',
+      detalle:   { ventaId, facturaNum: resultado.nuevoNum },
+      ip:        req.ip,
+    });
+
+    res.status(201).json(resultado.ventaActualizada);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al generar factura' });
+  }
+});
+
+// ─── GET /api/ventas/:id/factura — Datos completos para imprimir factura ──────
+router.get('/:id/factura', requireRol('ADMIN', 'VENDEDOR'), async (req, res) => {
+  try {
+    const venta = await prisma.venta.findUnique({
+      where: { id: Number(req.params.id) },
+      include: {
+        detalles: { include: { producto: true } },
+        usuario:  { select: { nombre: true } },
+      },
+    });
+    if (!venta) return res.status(404).json({ error: 'Venta no encontrada' });
+    if (!venta.facturaNum) return res.status(404).json({ error: 'Esta venta no tiene factura generada' });
+
+    const params = await prisma.parametro.findMany({
+      where: { clave: { in: ['nombre_empresa', 'ruc_empresa', 'direccion_empresa', 'telefono_empresa', 'itbms_porcentaje'] } },
+    });
+    const empresa = Object.fromEntries(params.map(p => [p.clave, p.valor]));
+
+    // Calcular montos con/sin ITBMS
+    const subtotal     = venta.total;
+    const itbmsPct     = parseFloat(empresa.itbms_porcentaje || '7') / 100;
+    const itbmsMonto   = venta.aplicaITBMS ? parseFloat((subtotal * itbmsPct).toFixed(2)) : 0;
+    const totalConITBMS = parseFloat((subtotal + itbmsMonto).toFixed(2));
+
+    res.json({ venta, empresa, subtotal, itbmsMonto, totalConITBMS });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Error al obtener factura' });
   }
 });
 

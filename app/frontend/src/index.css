@@ -50,3 +50,34 @@ a {
   color: var(--accent-purple);
   text-decoration: none;
 }
+
+/* ─── Estilos de impresión — oculta UI, muestra solo el contenido imprimible ── */
+@media print {
+  /* Ocultar todo */
+  body * { visibility: hidden; }
+
+  /* Mostrar solo el área marcada como imprimible */
+  .print-area,
+  .print-area * { visibility: visible; }
+
+  /* Posicionar el área imprimible en el origen de la página */
+  .print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* Limpiar los overlays y sombras al imprimir */
+  .tk-overlay,
+  .fac-overlay {
+    position: static !important;
+    background: none !important;
+    padding: 0 !important;
+  }
+
+  /* Ocultar botones de acción dentro de los modals */
+  .no-print,
+  .tk-actions,
+  .fac-actions { display: none !important; }
+}

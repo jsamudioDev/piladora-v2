@@ -4,6 +4,7 @@ import { formatMoney } from '../../utils/format';
 import { useToast, ToastContainer } from '../../components/Toast';
 import { useAuth } from '../../context/AuthContext';
 import HistorialVentas from './HistorialVentas';
+import ModalTicket from './ModalTicket';
 
 const METODOS_PAGO = ['Efectivo', 'Yappy', 'Fiado'];
 
@@ -212,6 +213,8 @@ export default function Venta() {
   const [ventaDevolver, setVentaDevolver] = useState(null);
   // Incrementar para forzar recarga del historial tras una devolución exitosa
   const [reloadHist, setReloadHist] = useState(0);
+  // Modal de ticket: se abre automáticamente al registrar una venta
+  const [ticketVentaId, setTicketVentaId] = useState(null);
   const { toasts, show }          = useToast();
 
   useEffect(() => {
@@ -285,7 +288,7 @@ export default function Venta() {
     if (carrito.length === 0) { show('El carrito está vacío', 'error'); return; }
     setEnviando(true);
     try {
-      await api.post('/ventas', {
+      const nuevaVenta = await api.post('/ventas', {
         metodoPago, cliente: cliente || null, ubicacion,
         nota: null,
         detalles: carrito.map(i => ({
@@ -301,6 +304,8 @@ export default function Venta() {
       const fresh = await api.get('/stock');
       setProductos(fresh);
       show(`Venta registrada — ${formatMoney(total)}`, 'success');
+      // Mostrar ticket automáticamente
+      setTicketVentaId(nuevaVenta.id);
     } catch (e) {
       show(e.message, 'error');
     } finally {
@@ -459,6 +464,14 @@ export default function Venta() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Modal de ticket — se abre automáticamente al registrar una venta */}
+      {ticketVentaId && (
+        <ModalTicket
+          ventaId={ticketVentaId}
+          onClose={() => setTicketVentaId(null)}
+        />
       )}
 
       {/* Modal de devolución — solo visible cuando el ADMIN selecciona una venta */}

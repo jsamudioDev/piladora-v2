@@ -2,15 +2,26 @@ import { useState, useEffect } from 'react';
 import api from '../../utils/api';
 import { formatMoney } from '../../utils/format';
 import { useAuth } from '../../context/AuthContext';
+import ModalTicket  from './ModalTicket';
+import ModalFactura from './ModalFactura';
+
+// Número de factura formateado
+function fmtFactura(n) {
+  return `F-${String(n).padStart(4, '0')}`;
+}
 
 export default function HistorialVentas({ onAnulada, onDevolver, reloadKey }) {
-  const { esAdmin }              = useAuth();
-  const [ventas, setVentas]      = useState([]);
-  const [loading, setLoading]    = useState(true);
-  const [expanded, setExpanded]  = useState(null);
-  const [anulando, setAnulando]  = useState(null);
+  const { esAdmin }             = useAuth();
+  const [ventas, setVentas]     = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [expanded, setExpanded] = useState(null);
+  const [anulando, setAnulando] = useState(null);
 
-  async function cargar() {
+  // Modals de ticket y factura
+  const [ticketVentaId, setTicketVentaId] = useState(null);
+  const [facturaVenta,  setFacturaVenta]  = useState(null);
+
+  async function cargarHistorial() {
     setLoading(true);
     try {
       const data = await api.get('/ventas/hoy');
@@ -20,8 +31,8 @@ export default function HistorialVentas({ onAnulada, onDevolver, reloadKey }) {
     }
   }
 
-  // Se recarga cuando el padre incrementa reloadKey (p.ej. tras una devolución exitosa)
-  useEffect(() => { cargar(); }, [reloadKey]);
+  // Se recarga cuando el padre incrementa reloadKey (tras una devolución exitosa)
+  useEffect(() => { cargarHistorial(); }, [reloadKey]);
 
   async function anular(id) {
     if (!window.confirm('¿Anular esta venta? Se restaurará el stock.')) return;
@@ -29,7 +40,7 @@ export default function HistorialVentas({ onAnulada, onDevolver, reloadKey }) {
     try {
       await api.delete(`/ventas/${id}`);
       onAnulada?.('Venta anulada y stock restaurado');
-      cargar();
+      cargarHistorial();
     } catch (e) {
       onAnulada?.(e.message, 'error');
     } finally {
@@ -61,6 +72,10 @@ export default function HistorialVentas({ onAnulada, onDevolver, reloadKey }) {
                 {v.cliente && <span className="hist-cliente">{v.cliente}</span>}
                 <span className={`badge-metodo badge-${v.metodoPago.toLowerCase()}`}>{v.metodoPago}</span>
                 <span className="hist-ubi">{v.ubicacion}</span>
+                {/* Badge de factura si existe */}
+                {v.facturaNum && (
+                  <span className="hist-fac">{fmtFactura(v.facturaNum)}</span>
+                )}
               </div>
               <div className="hist-right">
                 <span className="hist-monto">{formatMoney(v.total)}</span>
@@ -75,7 +90,12 @@ export default function HistorialVentas({ onAnulada, onDevolver, reloadKey }) {
               <div className="hist-detalle">
                 <table className="det-table">
                   <thead>
-                    <tr><th>Producto</th><th>Cant.</th><th>Precio</th><th>Subtotal</th></tr>
+                    <tr>
+                      <th>Producto</th>
+                      <th>Cant.</th>
+                      <th>Precio</th>
+                      <th>Subtotal</th>
+                    </tr>
                   </thead>
                   <tbody>
                     {v.detalles.map(d => (
@@ -90,8 +110,24 @@ export default function HistorialVentas({ onAnulada, onDevolver, reloadKey }) {
                 </table>
                 {v.nota && <p className="det-nota">Nota: {v.nota}</p>}
 
-                {/* Acciones: Devolver (solo ADMIN) y Anular */}
+                {/* Acciones: Ticket, Factura (admin), Devolver (admin), Anular */}
                 <div className="det-acciones">
+                  <button
+                    className="btn-ticket"
+                    onClick={() => setTicketVentaId(v.id)}
+                  >
+                    Ticket
+                  </button>
+
+                  {esAdmin && (
+                    <button
+                      className="btn-factura"
+                      onClick={() => setFacturaVenta(v)}
+                    >
+                      {v.facturaNum ? `Factura ${fmtFactura(v.facturaNum)}` : 'Factura'}
+                    </button>
+                  )}
+
                   {esAdmin && (
                     <button
                       className="btn-devolver"
@@ -100,6 +136,7 @@ export default function HistorialVentas({ onAnulada, onDevolver, reloadKey }) {
                       ↩ Devolver
                     </button>
                   )}
+
                   <button
                     className="btn-anular"
                     onClick={() => anular(v.id)}
@@ -113,6 +150,23 @@ export default function HistorialVentas({ onAnulada, onDevolver, reloadKey }) {
           </li>
         ))}
       </ul>
+
+      {/* Modal ticket */}
+      {ticketVentaId && (
+        <ModalTicket
+          ventaId={ticketVentaId}
+          onClose={() => setTicketVentaId(null)}
+        />
+      )}
+
+      {/* Modal factura */}
+      {facturaVenta && (
+        <ModalFactura
+          venta={facturaVenta}
+          onClose={() => setFacturaVenta(null)}
+          onFacturaGenerada={() => { setFacturaVenta(null); cargarHistorial(); }}
+        />
+      )}
 
       <style>{`
         .hist-loading, .hist-empty { color: var(--text-secondary); text-align: center; padding: 24px; font-size: 14px; }
@@ -130,6 +184,7 @@ export default function HistorialVentas({ onAnulada, onDevolver, reloadKey }) {
         .hist-id { font-weight: 700; font-size: 13px; color: var(--text-secondary); }
         .hist-cliente { font-size: 13px; color: var(--text-primary); }
         .hist-ubi { font-size: 11px; color: var(--text-secondary); background: var(--bg-base); padding: 2px 7px; border-radius: 10px; }
+        .hist-fac { font-size: 11px; font-weight: 700; color: var(--accent-purple); background: rgba(124,106,247,0.1); padding: 2px 7px; border-radius: 10px; border: 1px solid rgba(124,106,247,0.3); }
 
         .badge-metodo { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; }
         .badge-efectivo { background: rgba(74,222,128,0.15); color: var(--accent-green); }
@@ -150,7 +205,24 @@ export default function HistorialVentas({ onAnulada, onDevolver, reloadKey }) {
         .num { text-align: right; }
         .det-nota { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
 
-        .det-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+        /* Botones de acciones */
+        .det-acciones { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+        .btn-ticket {
+          background: rgba(96,165,250,0.1); color: var(--accent-blue);
+          border: 1px solid var(--accent-blue); border-radius: 7px;
+          padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+          transition: background 0.15s;
+        }
+        .btn-ticket:hover { background: rgba(96,165,250,0.2); }
+
+        .btn-factura {
+          background: rgba(124,106,247,0.1); color: var(--accent-purple);
+          border: 1px solid var(--accent-purple); border-radius: 7px;
+          padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+          transition: background 0.15s;
+        }
+        .btn-factura:hover { background: rgba(124,106,247,0.2); }
 
         .btn-devolver {
           background: rgba(96,165,250,0.1); color: var(--accent-blue);

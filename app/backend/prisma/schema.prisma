@@ -72,18 +72,23 @@ model StockMovimiento {
 // ─── MÓDULO: VENTA ────────────────────────────────────────────────────────────
 
 model Venta {
-  id         Int            @id @default(autoincrement())
-  total      Float
-  metodoPago String         // EFECTIVO | YAPPY | TRANSFERENCIA | CHEQUE | CREDITO
-  nota       String?
-  cliente    String?
-  ubicacion  String         @default("piladora")
-  ingresoId  Int?
-  creditoId  Int?           @unique
-  usuarioId  Int?
-  createdAt  DateTime       @default(now())
-  detalles   DetalleVenta[]
-  usuario    Usuario?       @relation(fields: [usuarioId], references: [id])
+  id               Int            @id @default(autoincrement())
+  total            Float
+  metodoPago       String         // EFECTIVO | YAPPY | TRANSFERENCIA | CHEQUE | CREDITO
+  nota             String?
+  cliente          String?
+  ubicacion        String         @default("piladora")
+  ingresoId        Int?
+  creditoId        Int?           @unique
+  usuarioId        Int?
+  // ─── Facturación ─────────────────────────────────────────────────────────────
+  facturaNum       Int?           @unique  // número correlativo de factura
+  clienteRuc       String?                 // RUC o cédula del cliente
+  clienteDireccion String?                 // dirección del cliente para factura
+  aplicaITBMS      Boolean        @default(false) // aplica impuesto del 7%
+  createdAt        DateTime       @default(now())
+  detalles         DetalleVenta[]
+  usuario          Usuario?       @relation(fields: [usuarioId], references: [id])
 }
 
 model DetalleVenta {

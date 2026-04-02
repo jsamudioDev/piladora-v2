@@ -18,14 +18,21 @@ const operarios = [
 ];
 
 const parametros = [
-  { clave: 'nombre_negocio',   valor: 'Piladora Samudio' },
-  { clave: 'meta_margen',      valor: '25' },
-  { clave: 'pago_por_tanda',   valor: '15' },
-  { clave: 'precio_pilado',    valor: '3.50' },
-  { clave: 'lb_por_hora',      valor: '200' },
-  { clave: 'dias_op_periodo',  valor: '26' },
-  { clave: 'peso_saco_humedo', valor: '63' },
-  { clave: 'peso_saco_seco',   valor: '50' },
+  { clave: 'nombre_negocio',    valor: 'Piladora Samudio' },
+  { clave: 'meta_margen',       valor: '25' },
+  { clave: 'pago_por_tanda',    valor: '15' },
+  { clave: 'precio_pilado',     valor: '3.50' },
+  { clave: 'lb_por_hora',       valor: '200' },
+  { clave: 'dias_op_periodo',   valor: '26' },
+  { clave: 'peso_saco_humedo',  valor: '63' },
+  { clave: 'peso_saco_seco',    valor: '50' },
+  // ─── Parámetros de facturación ──────────────────────────────────────────────
+  { clave: 'nombre_empresa',    valor: 'Piladora San José',      descripcion: 'Nombre comercial de la empresa' },
+  { clave: 'ruc_empresa',       valor: '8-123-456',              descripcion: 'RUC o cédula del negocio' },
+  { clave: 'direccion_empresa', valor: 'Panamá, Rep. de Panamá', descripcion: 'Dirección física de la empresa' },
+  { clave: 'telefono_empresa',  valor: '6000-0000',              descripcion: 'Teléfono de contacto' },
+  { clave: 'itbms_porcentaje',  valor: '7',                      descripcion: 'Porcentaje de ITBMS (impuesto)' },
+  { clave: 'ultimo_num_factura',valor: '0',                      descripcion: 'Último número de factura emitido (auto-incremental)' },
 ];
 
 // ─── Datos de seed: Usuarios ─────────────────────────────────────────────────
