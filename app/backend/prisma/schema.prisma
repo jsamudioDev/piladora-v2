@@ -23,11 +23,12 @@ model Usuario {
 // ─── MÓDULO: CONFIG ───────────────────────────────────────────────────────────
 
 model Operario {
-  id        Int       @id @default(autoincrement())
+  id        Int              @id @default(autoincrement())
   nombre    String
-  activo    Boolean   @default(true)
-  createdAt DateTime  @default(now())
+  activo    Boolean          @default(true)
+  createdAt DateTime         @default(now())
   pilados   Pilado[]
+  secados   SecadoPulidura[]
 }
 
 model Parametro {
@@ -109,6 +110,24 @@ model Pilado {
   nota             String?
   createdAt        DateTime @default(now())
   operario         Operario @relation(fields: [operarioId], references: [id])
+}
+
+// ─── MÓDULO: PULIDURA ────────────────────────────────────────────────────────
+
+model SecadoPulidura {
+  id           Int      @id @default(autoincrement())
+  operarioId   Int
+  sacosHumedos Float                    // sacos de pulidura húmeda que entran
+  sacosSecs    Float    @default(0)     // sacos de pulidura seca que salen
+  pesoHumedo   Float    @default(63)   // lbs por saco húmedo (configurable)
+  pesoSeco     Float    @default(50)   // lbs por saco seco (configurable)
+  rendimiento  Float    @default(0)    // porcentaje calculado
+  lbsHumedas   Float    @default(0)    // sacosHumedos × pesoHumedo
+  lbsSecas     Float    @default(0)    // sacosSecs × pesoSeco
+  nota         String?
+  usuarioId    Int?
+  createdAt    DateTime @default(now())
+  operario     Operario @relation(fields: [operarioId], references: [id])
 }
 
 // ─── MÓDULO: CRÉDITOS ────────────────────────────────────────────────────────

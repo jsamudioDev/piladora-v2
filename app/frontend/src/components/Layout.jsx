@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { id: 'panel',    label: 'Panel',    icon: '📊', roles: ['ADMIN'] },
   { id: 'venta',    label: 'Venta',    icon: '🛒', roles: ['ADMIN', 'VENDEDOR'] },
   { id: 'pilar',    label: 'Pilar',    icon: '⚙️', roles: ['ADMIN', 'OPERARIO'] },
+  { id: 'pulidura', label: 'Pulidura', icon: '🌾', roles: ['ADMIN', 'OPERARIO'] },
   { id: 'stock',    label: 'Stock',    icon: '📦', roles: ['ADMIN', 'OPERARIO', 'VENDEDOR'] },
   { id: 'dinero',   label: 'Dinero',   icon: '💰', roles: ['ADMIN'] },
   { id: 'creditos', label: 'Créditos', icon: '📋', roles: ['ADMIN'] },

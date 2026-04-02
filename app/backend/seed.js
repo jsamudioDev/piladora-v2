@@ -24,6 +24,8 @@ const parametros = [
   { clave: 'precio_pilado',    valor: '3.50' },
   { clave: 'lb_por_hora',      valor: '200' },
   { clave: 'dias_op_periodo',  valor: '26' },
+  { clave: 'peso_saco_humedo', valor: '63' },
+  { clave: 'peso_saco_seco',   valor: '50' },
 ];
 
 // ─── Datos de seed: Usuarios ─────────────────────────────────────────────────

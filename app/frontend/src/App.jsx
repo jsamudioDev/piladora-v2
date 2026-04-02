@@ -10,7 +10,8 @@ import Pilar    from './pages/Pilar/Pilar';
 import Stock    from './pages/Stock/Stock';
 import Dinero   from './pages/Dinero/Dinero';
 import Config   from './pages/Config/Config';
-import Creditos from './pages/Creditos/Creditos';
+import Creditos  from './pages/Creditos/Creditos';
+import Pulidura  from './pages/Pulidura/Pulidura';
 import './App.css';
 
 export default function App() {
@@ -71,6 +72,13 @@ function AppRoutes() {
       <Route path="/creditos" element={
         <ProtectedRoute allowedRoles={['ADMIN']}>
           <Layout activeModule="creditos"><Creditos /></Layout>
+        </ProtectedRoute>
+      } />
+
+      {/* Pulidura — ADMIN y OPERARIO */}
+      <Route path="/pulidura" element={
+        <ProtectedRoute allowedRoles={['ADMIN', 'OPERARIO']}>
+          <Layout activeModule="pulidura"><Pulidura /></Layout>
         </ProtectedRoute>
       } />
 

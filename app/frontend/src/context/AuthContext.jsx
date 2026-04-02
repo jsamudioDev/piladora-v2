@@ -18,6 +18,7 @@ const PERMISOS = {
   dinero:   ['ADMIN'],
   creditos: ['ADMIN'],
   config:   ['ADMIN'],
+  pulidura: ['ADMIN', 'OPERARIO'],
 };
 
 /**
