@@ -9,7 +9,8 @@ import Venta  from './pages/Venta/Venta';
 import Pilar  from './pages/Pilar/Pilar';
 import Stock  from './pages/Stock/Stock';
 import Dinero from './pages/Dinero/Dinero';
-import Config from './pages/Config/Config';
+import Config    from './pages/Config/Config';
+import Creditos  from './pages/Creditos/Creditos';
 import './App.css';
 
 export default function App() {
@@ -58,6 +59,12 @@ function AppRoutes() {
       <Route path="/dinero" element={
         <ProtectedRoute>
           <Layout activeModule="dinero"><Dinero /></Layout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/creditos" element={
+        <ProtectedRoute>
+          <Layout activeModule="creditos"><Creditos /></Layout>
         </ProtectedRoute>
       } />
 

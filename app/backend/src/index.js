@@ -48,12 +48,13 @@ app.use('/api', apiLimiter);
 app.use('/api', authMiddleware);
 
 // ─── Rutas protegidas (requieren token válido) ────────────────────────────────
-app.use('/api/ventas',  require('./routes/ventas'));
-app.use('/api/stock',   require('./routes/stock'));
-app.use('/api/pilados', require('./routes/pilados'));
-app.use('/api/dinero',  require('./routes/dinero'));
-app.use('/api/config',  require('./routes/config'));
-app.use('/api/panel',   require('./routes/panel'));
+app.use('/api/ventas',   require('./routes/ventas'));
+app.use('/api/stock',    require('./routes/stock'));
+app.use('/api/pilados',  require('./routes/pilados'));
+app.use('/api/dinero',   require('./routes/dinero'));
+app.use('/api/config',   require('./routes/config'));
+app.use('/api/panel',    require('./routes/panel'));
+app.use('/api/creditos', require('./routes/creditos'));
 
 // ─── Iniciar servidor ─────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;

@@ -70,7 +70,12 @@ router.post('/', validateVenta, async (req, res) => {
     }));
     const total = detallesCalc.reduce((s, d) => s + d.subtotal, 0);
 
-    // Crear venta + ingreso en transacción
+    // Crear venta en transacción.
+    // Si el método de pago es CREDITO:
+    //   - Se crea la venta normalmente
+    //   - Se crea un registro Credito con el monto total como saldo pendiente
+    //   - NO se crea Ingreso (el ingreso se genera cuando el cliente abona)
+    // Para cualquier otro método de pago, se crea el Ingreso de inmediato.
     const result = await prisma.$transaction(async (tx) => {
       const venta = await tx.venta.create({
         data: {
@@ -81,25 +86,38 @@ router.post('/', validateVenta, async (req, res) => {
         include: { detalles: { include: { producto: true } } },
       });
 
-      const ingreso = await tx.ingreso.create({
-        data: {
-          monto:       total,
-          descripcion: `Venta #${venta.id}${cliente ? ` — ${cliente}` : ''}`,
-          categoria:   'Venta',
-          ventaId:     venta.id,
-        },
-      });
+      if (metodoPago === 'CREDITO') {
+        // Crear crédito asociado a esta venta
+        const credito = await tx.credito.create({
+          data: {
+            clienteNombre: cliente || 'Cliente',
+            montoTotal:    total,
+            saldo:         total,
+            ventaId:       venta.id,
+          },
+        });
+        // Guardar creditoId en la venta para referencia
+        await tx.venta.update({ where: { id: venta.id }, data: { creditoId: credito.id } });
+      } else {
+        // Venta de contado: crear ingreso de inmediato
+        const ingreso = await tx.ingreso.create({
+          data: {
+            monto:       total,
+            descripcion: `Venta #${venta.id}${cliente ? ` — ${cliente}` : ''}`,
+            categoria:   'Venta',
+            ventaId:     venta.id,
+          },
+        });
+        await tx.venta.update({ where: { id: venta.id }, data: { ingresoId: ingreso.id } });
+      }
 
-      // Descontar stock
+      // Descontar stock (siempre, independientemente del método de pago)
       for (const d of detallesCalc) {
         await tx.producto.update({
           where: { id: d.productoId },
           data:  { [stockField]: { decrement: d.cantidad } },
         });
       }
-
-      // Guardar ingresoId en la venta
-      await tx.venta.update({ where: { id: venta.id }, data: { ingresoId: ingreso.id } });
 
       return venta;
     });

@@ -67,11 +67,12 @@ model StockMovimiento {
 model Venta {
   id         Int            @id @default(autoincrement())
   total      Float
-  metodoPago String
+  metodoPago String         // EFECTIVO | YAPPY | TRANSFERENCIA | CHEQUE | CREDITO
   nota       String?
   cliente    String?
   ubicacion  String         @default("piladora")
   ingresoId  Int?
+  creditoId  Int?           @unique
   usuarioId  Int?
   createdAt  DateTime       @default(now())
   detalles   DetalleVenta[]
@@ -108,6 +109,35 @@ model Pilado {
   nota             String?
   createdAt        DateTime @default(now())
   operario         Operario @relation(fields: [operarioId], references: [id])
+}
+
+// ─── MÓDULO: CRÉDITOS ────────────────────────────────────────────────────────
+
+model Credito {
+  id            Int      @id @default(autoincrement())
+  clienteNombre String
+  clienteTel    String?
+  montoTotal    Float
+  montoPagado   Float    @default(0)
+  saldo         Float
+  estado        String   @default("PENDIENTE") // PENDIENTE | PAGADO | VENCIDO
+  nota          String?
+  ventaId       Int?     @unique
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  abonos        Abono[]
+}
+
+model Abono {
+  id         Int      @id @default(autoincrement())
+  creditoId  Int
+  monto      Float
+  metodoPago String   @default("EFECTIVO") // EFECTIVO | YAPPY | TRANSFERENCIA | CHEQUE
+  referencia String?
+  nota       String?
+  usuarioId  Int?
+  createdAt  DateTime @default(now())
+  credito    Credito  @relation(fields: [creditoId], references: [id])
 }
 
 // ─── MÓDULO: DINERO ───────────────────────────────────────────────────────────

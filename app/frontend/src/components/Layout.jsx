@@ -8,8 +8,9 @@ const NAV_ITEMS = [
   { id: 'venta',  label: 'Venta',  icon: '🛒' },
   { id: 'pilar',  label: 'Pilar',  icon: '⚙️' },
   { id: 'stock',  label: 'Stock',  icon: '📦' },
-  { id: 'dinero', label: 'Dinero', icon: '💰' },
-  { id: 'config', label: 'Config', icon: '⚙️', adminOnly: true },
+  { id: 'dinero',   label: 'Dinero',   icon: '💰' },
+  { id: 'creditos', label: 'Créditos', icon: '📋' },
+  { id: 'config',   label: 'Config',   icon: '⚙️', adminOnly: true },
 ];
 
 export default function Layout({ children, activeModule }) {

@@ -4,14 +4,20 @@ import api from '../../utils/api';
 import { formatMoney, formatQQ } from '../../utils/format';
 
 export default function Panel() {
-  const [data, setData]   = useState(null);
-  const [error, setError] = useState(null);
-  const navigate          = useNavigate();
+  const [data,     setData]     = useState(null);
+  const [creditos, setCreditos] = useState({ activos: 0, vencidos: 0, totalPendiente: 0 });
+  const [error,    setError]    = useState(null);
+  const navigate                = useNavigate();
 
   async function cargar() {
     try {
-      const d = await api.get('/panel');
+      // Cargamos el panel y el resumen de créditos en paralelo
+      const [d, cred] = await Promise.all([
+        api.get('/panel'),
+        api.get('/creditos/resumen'),
+      ]);
       setData(d);
+      setCreditos(cred);
       setError(null);
     } catch (e) {
       setError(e.message);
