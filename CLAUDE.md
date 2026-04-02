@@ -52,11 +52,11 @@ Dueño: Jacob Samudio | Ubuntu 24.04 | Acer Nitro 5
 - [x] Fase 5 — Pulidura/Secado con estadísticas
 - [x] Fase 6 — Devoluciones + Traspasos entre ubicaciones
 - [x] Fase 7 — Bitácora auditoría + Admin Config expandido (perfil, productos, módulos dinámicos)
-- [ ] Fase 8 — Tickets de Factura + Factura Electrónica
+- [x] Fase 8 — Tickets de venta + Facturas con ITBMS y numeración correlativa
 - [ ] Fase 9 — Mejoras UI/UX + PWA
 
 ## Próximo paso
-Fase 8: Tickets de Factura + Factura Electrónica
+Fase 9: Mejoras UI/UX + PWA (instalable en móvil y escritorio)
 
 ## Arquitectura backend
 - Middleware global: authMiddleware (JWT), apiLimiter, helmet, CORS
@@ -68,6 +68,7 @@ Fase 8: Tickets de Factura + Factura Electrónica
 
 ## Modelos Prisma
 Usuario, Operario, Parametro, Producto, StockMovimiento,
-Venta, DetalleVenta, Pilado, SecadoPulidura,
+Venta (con facturaNum, clienteRuc, clienteDireccion, aplicaITBMS),
+DetalleVenta, Pilado, SecadoPulidura,
 Credito, Abono, Ingreso, Egreso,
 Devolucion, DetalleDevolucion, Traspaso, Bitacora
