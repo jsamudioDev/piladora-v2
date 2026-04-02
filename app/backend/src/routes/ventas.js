@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const prisma  = require('../prisma');
-const { validateVenta } = require('../middleware/validators');
+const { validateVenta }  = require('../middleware/validators');
+const { registrar }      = require('../services/bitacoraService');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function hoy() {
@@ -122,6 +123,7 @@ router.post('/', validateVenta, async (req, res) => {
       return venta;
     });
 
+    registrar({ usuarioId: req.usuario?.id, nombre: req.usuario?.nombre, modulo: 'venta', accion: 'crear', detalle: { ventaId: result.id, total: result.total }, ip: req.ip });
     res.status(201).json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

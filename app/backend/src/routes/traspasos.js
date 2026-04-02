@@ -2,6 +2,7 @@
 // Un traspaso mueve stock entre Piladora y Local (o viceversa).
 const router = require('express').Router();
 const prisma  = require('../prisma');
+const { registrar } = require('../services/bitacoraService');
 
 const UBICACIONES_VALIDAS = ['piladora', 'local'];
 
@@ -98,6 +99,7 @@ router.post('/', async (req, res) => {
       return traspaso;
     });
 
+    registrar({ usuarioId: req.usuario?.id, nombre: req.usuario?.nombre, modulo: 'traspasos', accion: 'traspaso', detalle: { traspasoId: resultado.id, origen, destino, cantidad: Number(cantidad) }, ip: req.ip });
     res.status(201).json(resultado);
   } catch (e) {
     res.status(400).json({ error: e.message });

@@ -12,6 +12,7 @@ import Dinero   from './pages/Dinero/Dinero';
 import Config   from './pages/Config/Config';
 import Creditos  from './pages/Creditos/Creditos';
 import Pulidura  from './pages/Pulidura/Pulidura';
+import Bitacora  from './pages/Bitacora/Bitacora';
 import './App.css';
 
 export default function App() {
@@ -79,6 +80,13 @@ function AppRoutes() {
       <Route path="/pulidura" element={
         <ProtectedRoute allowedRoles={['ADMIN', 'OPERARIO']}>
           <Layout activeModule="pulidura"><Pulidura /></Layout>
+        </ProtectedRoute>
+      } />
+
+      {/* Bitácora — solo ADMIN */}
+      <Route path="/bitacora" element={
+        <ProtectedRoute allowedRoles={['ADMIN']}>
+          <Layout activeModule="bitacora"><Bitacora /></Layout>
         </ProtectedRoute>
       } />
 

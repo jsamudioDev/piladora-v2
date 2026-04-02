@@ -3,16 +3,17 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-// Todos los items del menú con sus roles permitidos
+// Todos los items del menú — tieneAcceso() filtra según rol y módulos dinámicos
 const NAV_ITEMS = [
-  { id: 'panel',    label: 'Panel',    icon: '📊', roles: ['ADMIN'] },
-  { id: 'venta',    label: 'Venta',    icon: '🛒', roles: ['ADMIN', 'VENDEDOR'] },
-  { id: 'pilar',    label: 'Pilar',    icon: '⚙️', roles: ['ADMIN', 'OPERARIO'] },
-  { id: 'pulidura', label: 'Pulidura', icon: '🌾', roles: ['ADMIN', 'OPERARIO'] },
-  { id: 'stock',    label: 'Stock',    icon: '📦', roles: ['ADMIN', 'OPERARIO', 'VENDEDOR'] },
-  { id: 'dinero',   label: 'Dinero',   icon: '💰', roles: ['ADMIN'] },
-  { id: 'creditos', label: 'Créditos', icon: '📋', roles: ['ADMIN'] },
-  { id: 'config',   label: 'Config',   icon: '🔧', roles: ['ADMIN'] },
+  { id: 'panel',    label: 'Panel',    icon: '📊' },
+  { id: 'venta',    label: 'Venta',    icon: '🛒' },
+  { id: 'pilar',    label: 'Pilar',    icon: '⚙️' },
+  { id: 'pulidura', label: 'Pulidura', icon: '🌾' },
+  { id: 'stock',    label: 'Stock',    icon: '📦' },
+  { id: 'dinero',   label: 'Dinero',   icon: '💰' },
+  { id: 'creditos', label: 'Créditos', icon: '📋' },
+  { id: 'bitacora', label: 'Bitácora', icon: '🗒' },
+  { id: 'config',   label: 'Config',   icon: '🔧' },
 ];
 
 // Etiqueta legible para mostrar el rol en el badge
@@ -25,10 +26,10 @@ const ROL_LABEL = {
 export default function Layout({ children, activeModule }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const { usuario, logout } = useAuth();
+  const { usuario, logout, tieneAcceso } = useAuth();
 
-  // Filtrar items de navegación según el rol del usuario
-  const navItems = NAV_ITEMS.filter(item => item.roles.includes(usuario?.rol));
+  // Filtrar items de navegación usando tieneAcceso() — soporta módulos dinámicos
+  const navItems = NAV_ITEMS.filter(item => tieneAcceso(item.id));
 
   function handleLogout() {
     logout();

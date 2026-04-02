@@ -4,12 +4,8 @@ import api from '../utils/api';
 
 const AuthContext = createContext(null);
 
-// ─── Tabla de permisos por sección ───────────────────────────────────────────
-// Define qué roles pueden acceder a cada sección del sistema.
-// Refleja la tabla de permisos del negocio:
-//   ADMIN    → acceso total
-//   OPERARIO → piladora: pilar y stock (solo piladora)
-//   VENDEDOR → local: ventas y stock (solo local)
+// ─── Tabla de permisos estáticos (fallback si no hay módulos dinámicos) ───────
+// Refleja los roles por defecto antes de que el ADMIN configure módulos.
 const PERMISOS = {
   panel:        ['ADMIN'],
   venta:        ['ADMIN', 'VENDEDOR'],
@@ -19,6 +15,7 @@ const PERMISOS = {
   creditos:     ['ADMIN'],
   config:       ['ADMIN'],
   pulidura:     ['ADMIN', 'OPERARIO'],
+  bitacora:     ['ADMIN'],
   devoluciones: ['ADMIN'],
   traspasos:    ['ADMIN', 'OPERARIO'],
 };
@@ -28,7 +25,7 @@ const PERMISOS = {
  * Guarda token y datos del usuario en localStorage.
  */
 export function AuthProvider({ children }) {
-  const [usuario, setUsuario] = useState(null);
+  const [usuario,  setUsuario]  = useState(null);
   const [cargando, setCargando] = useState(true);
 
   // Al montar, verificar si hay token guardado
@@ -45,12 +42,12 @@ export function AuthProvider({ children }) {
   async function verificarToken(token) {
     try {
       const res = await api.get('/auth/me', {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       setUsuario(res.usuario);
-    } catch (err) {
-      // Token inválido o expirado — limpiar
+    } catch {
       localStorage.removeItem('token');
+      localStorage.removeItem('piladora_modulos');
       setUsuario(null);
     } finally {
       setCargando(false);
@@ -62,12 +59,23 @@ export function AuthProvider({ children }) {
     const res = await api.post('/auth/login', { email, password });
     localStorage.setItem('token', res.token);
     setUsuario(res.usuario);
+
+    // Cargar módulos dinámicos — solo ADMIN tiene acceso al endpoint.
+    // Si falla (usuario no es ADMIN o BD sin datos), simplemente limpiamos.
+    try {
+      const modulos = await api.get('/config/modulos');
+      localStorage.setItem('piladora_modulos', JSON.stringify(modulos));
+    } catch {
+      localStorage.removeItem('piladora_modulos');
+    }
+
     return res.usuario;
   }
 
   // Cerrar sesión
   function logout() {
     localStorage.removeItem('token');
+    localStorage.removeItem('piladora_modulos');
     setUsuario(null);
   }
 
@@ -78,12 +86,30 @@ export function AuthProvider({ children }) {
 
   /**
    * tieneAcceso(seccion) — Retorna true si el usuario puede ver esa sección.
-   * Consulta la tabla PERMISOS definida arriba.
+   *
+   * Prioridad:
+   * 1. Lee módulos dinámicos desde localStorage (configurados por el ADMIN).
+   * 2. Si no existe un parámetro para esa sección, usa PERMISOS estático como fallback.
    */
   function tieneAcceso(seccion) {
     if (!usuario) return false;
-    const rolesPermitidos = PERMISOS[seccion] || [];
-    return rolesPermitidos.includes(usuario.rol);
+
+    try {
+      const raw = localStorage.getItem('piladora_modulos');
+      if (raw) {
+        const modulos = JSON.parse(raw);
+        const param = modulos.find(m => m.clave === `modulo_${seccion}`);
+        if (param) {
+          // El valor es "ADMIN,VENDEDOR" — verificar si el rol actual está incluido
+          return param.valor.split(',').map(r => r.trim()).includes(usuario.rol);
+        }
+      }
+    } catch {
+      // Si el JSON está corrupto, ignorar y usar fallback
+    }
+
+    // Fallback: tabla estática
+    return (PERMISOS[seccion] || []).includes(usuario.rol);
   }
 
   return (

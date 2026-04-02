@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const prisma  = require('../prisma');
 const { validateProducto, validateMovimiento } = require('../middleware/validators');
+const { registrar } = require('../services/bitacoraService');
 
 // ─── GET /api/stock — listar productos filtrados por rol ─────────────────────
 // ADMIN    → todos los productos
@@ -145,6 +146,7 @@ router.post('/movimiento', validateMovimiento, async (req, res) => {
       }),
     ]);
 
+    registrar({ usuarioId: req.usuario?.id, nombre: req.usuario?.nombre, modulo: 'stock', accion: 'movimiento', detalle: { tipo, productoId: Number(productoId), cantidad: Number(cantidad) }, ip: req.ip });
     res.status(201).json(movimiento);
   } catch (err) {
     res.status(500).json({ error: err.message });

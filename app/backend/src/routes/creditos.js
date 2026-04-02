@@ -2,6 +2,7 @@
 const router = require('express').Router();
 const prisma  = require('../prisma');
 const { authMiddleware, requireAdmin } = require('../middleware/auth');
+const { registrar } = require('../services/bitacoraService');
 
 // Todas las rutas requieren token JWT válido
 router.use(authMiddleware);
@@ -108,6 +109,7 @@ router.post('/', async (req, res) => {
       },
     });
 
+    registrar({ usuarioId: req.usuario?.id, nombre: req.usuario?.nombre, modulo: 'creditos', accion: 'crear', detalle: { creditoId: credito.id, clienteNombre: credito.clienteNombre, total: credito.montoTotal }, ip: req.ip });
     res.status(201).json(credito);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -196,6 +198,7 @@ router.post('/:id/abono', async (req, res) => {
       return { abono, credito: creditoActualizado };
     });
 
+    registrar({ usuarioId: req.usuario?.id, nombre: req.usuario?.nombre, modulo: 'creditos', accion: 'abonar', detalle: { creditoId, monto: Number(monto) }, ip: req.ip });
     res.status(201).json(resultado);
   } catch (err) {
     res.status(500).json({ error: err.message });

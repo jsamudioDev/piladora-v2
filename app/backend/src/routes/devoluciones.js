@@ -1,6 +1,7 @@
 // ─── Rutas de devoluciones ────────────────────────────────────────────────────
 const router = require('express').Router();
 const prisma  = require('../prisma');
+const { registrar } = require('../services/bitacoraService');
 
 // GET /api/devoluciones — Últimas 30 devoluciones con detalles, producto y cliente
 router.get('/', async (req, res) => {
@@ -151,6 +152,7 @@ router.post('/', async (req, res) => {
       return devolucion;
     });
 
+    registrar({ usuarioId: req.usuario?.id, nombre: req.usuario?.nombre, modulo: 'devoluciones', accion: 'devolucion', detalle: { devolucionId: resultado.id, ventaId: Number(ventaId) }, ip: req.ip });
     res.status(201).json(resultado);
   } catch (e) {
     res.status(400).json({ error: e.message });

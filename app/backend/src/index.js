@@ -60,6 +60,7 @@ app.use('/api/config',   requireRol('ADMIN'),                          require('
 app.use('/api/pulidura',     requireRol('ADMIN', 'OPERARIO'),             require('./routes/pulidura'));
 app.use('/api/devoluciones', requireRol('ADMIN'),                         require('./routes/devoluciones'));
 app.use('/api/traspasos',    requireRol('ADMIN', 'OPERARIO'),             require('./routes/traspasos'));
+app.use('/api/bitacora',    require('./routes/bitacora'));
 
 // ─── Iniciar servidor ─────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;

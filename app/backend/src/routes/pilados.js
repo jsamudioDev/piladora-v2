@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const prisma  = require('../prisma');
 const { validatePilado } = require('../middleware/validators');
+const { registrar }      = require('../services/bitacoraService');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function hoy() {
@@ -184,6 +185,7 @@ router.post('/', validatePilado, async (req, res) => {
       return pilado;
     });
 
+    registrar({ usuarioId: req.usuario?.id, nombre: req.usuario?.nombre, modulo: 'pilar', accion: 'registrar', detalle: { piladoId: result.id }, ip: req.ip });
     res.status(201).json(result);
   } catch (err) {
     res.status(400).json({ error: err.message });

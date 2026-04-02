@@ -32,9 +32,10 @@ model Operario {
 }
 
 model Parametro {
-  id    Int    @id @default(autoincrement())
-  clave String @unique
-  valor String
+  id          Int     @id @default(autoincrement())
+  clave       String  @unique
+  valor       String
+  descripcion String?
 }
 
 // ─── MÓDULO: STOCK ────────────────────────────────────────────────────────────
@@ -43,11 +44,13 @@ model Producto {
   id                  Int                 @id @default(autoincrement())
   nombre              String
   unidad              String
+  precio              Float               @default(0)   // precio de venta sugerido
   stockActual         Float               @default(0)
   stockLocal          Float               @default(0)
   stockMinimo         Float               @default(0)
   ubicacion           String              @default("piladora")
   categoria           String              @default("grano")
+  activo              Boolean             @default(true)
   createdAt           DateTime            @default(now())
   movimientos         StockMovimiento[]
   detallesVenta       DetalleVenta[]
@@ -201,6 +204,23 @@ model DetalleDevolucion {
   ubicacion    String     @default("piladora") // ubicación de la venta original
   devolucion   Devolucion @relation(fields: [devolucionId], references: [id])
   producto     Producto   @relation(fields: [productoId], references: [id])
+}
+
+// ─── MÓDULO: BITÁCORA ────────────────────────────────────────────────────────
+
+model Bitacora {
+  id        Int      @id @default(autoincrement())
+  usuarioId Int?
+  nombre    String?                          // nombre del usuario al momento del log
+  modulo    String                           // panel | venta | pilar | stock | dinero | creditos | config | auth | pulidura | devoluciones | traspasos
+  accion    String                           // login | logout | crear | editar | eliminar | abonar | registrar | traspaso | devolucion
+  detalle   String   @db.Text               // JSON o texto libre con detalles
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([modulo])
+  @@index([usuarioId])
+  @@index([createdAt])
 }
 
 // ─── MÓDULO: TRASPASOS ────────────────────────────────────────────────────────

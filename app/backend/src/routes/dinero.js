@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const prisma = require('../prisma');
 const { validateEgreso } = require('../middleware/validators');
+const { registrar }      = require('../services/bitacoraService');
 
 const CATEGORIAS_VALIDAS = ['Compra Maíz', 'Flete', 'Salarios', 'Mantenimiento', 'Otro'];
 
@@ -111,6 +112,7 @@ router.post('/egresos', validateEgreso, async (req, res) => {
     const egreso = await prisma.egreso.create({
       data: { monto: Number(monto), descripcion: descripcion.trim(), categoria },
     });
+    registrar({ usuarioId: req.usuario?.id, nombre: req.usuario?.nombre, modulo: 'dinero', accion: 'egreso', detalle: { monto: Number(monto), descripcion: descripcion.trim() }, ip: req.ip });
     res.status(201).json(egreso);
   } catch (e) {
     res.status(500).json({ error: e.message });
