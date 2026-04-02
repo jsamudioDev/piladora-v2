@@ -14,7 +14,7 @@ model Usuario {
   nombre    String
   email     String   @unique
   password  String
-  rol       String   @default("VENDEDOR") // ADMIN | VENDEDOR
+  rol       String   @default("VENDEDOR") // ADMIN | OPERARIO | VENDEDOR
   activo    Boolean  @default(true)
   createdAt DateTime @default(now())
   ventas    Venta[]

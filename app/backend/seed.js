@@ -28,8 +28,9 @@ const parametros = [
 
 // ─── Datos de seed: Usuarios ─────────────────────────────────────────────────
 const usuarios = [
-  { nombre: 'Administrador', email: 'admin@piladora.com', password: 'Admin2026!', rol: 'ADMIN' },
+  { nombre: 'Administrador',  email: 'admin@piladora.com',    password: 'Admin2026!',    rol: 'ADMIN' },
   { nombre: 'Vendedor Local', email: 'vendedor@piladora.com', password: 'Vendedor2026!', rol: 'VENDEDOR' },
+  { nombre: 'Operario Planta', email: 'operario@piladora.com', password: 'Operario2026!', rol: 'OPERARIO' },
 ];
 
 // ─── Función auxiliar para seed ──────────────────────────────────────────────

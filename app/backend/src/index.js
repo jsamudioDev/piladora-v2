@@ -3,6 +3,7 @@ const express = require('express');
 const cors    = require('cors');
 const { authMiddleware }              = require('./middleware/auth');
 const { helmetConfig, apiLimiter }    = require('./middleware/security');
+const { requireRol }                  = require('./middleware/permisos');
 
 const app = express();
 
@@ -47,14 +48,15 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api', apiLimiter);
 app.use('/api', authMiddleware);
 
-// ─── Rutas protegidas (requieren token válido) ────────────────────────────────
-app.use('/api/ventas',   require('./routes/ventas'));
-app.use('/api/stock',    require('./routes/stock'));
-app.use('/api/pilados',  require('./routes/pilados'));
-app.use('/api/dinero',   require('./routes/dinero'));
-app.use('/api/config',   require('./routes/config'));
-app.use('/api/panel',    require('./routes/panel'));
-app.use('/api/creditos', require('./routes/creditos'));
+// ─── Rutas protegidas (requieren token válido + rol permitido) ────────────────
+// requireRol filtra por rol ANTES de que la petición llegue al router
+app.use('/api/panel',    requireRol('ADMIN'),                          require('./routes/panel'));
+app.use('/api/ventas',   requireRol('ADMIN', 'VENDEDOR'),              require('./routes/ventas'));
+app.use('/api/pilados',  requireRol('ADMIN', 'OPERARIO'),              require('./routes/pilados'));
+app.use('/api/stock',    requireRol('ADMIN', 'OPERARIO', 'VENDEDOR'),  require('./routes/stock'));
+app.use('/api/dinero',   requireRol('ADMIN'),                          require('./routes/dinero'));
+app.use('/api/creditos', requireRol('ADMIN'),                          require('./routes/creditos'));
+app.use('/api/config',   requireRol('ADMIN'),                          require('./routes/config'));
 
 // ─── Iniciar servidor ─────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;

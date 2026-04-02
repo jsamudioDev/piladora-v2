@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import api from '../../utils/api';
-import { formatMoney } from '../../utils/format';
+import { useAuth } from '../../context/AuthContext';
 import { useToast, ToastContainer } from '../../components/Toast';
 import ModalProducto from './ModalProducto';
 import ModalMovimiento from './ModalMovimiento';
@@ -19,16 +19,29 @@ function colorPunto(producto) {
 }
 
 export default function Stock() {
-  const [productos, setProductos]         = useState([]);
-  const [busqueda, setBusqueda]           = useState('');
-  const [tab, setTab]                     = useState('todos');
-  const [modalProd, setModalProd]         = useState(null);  // null | 'nuevo' | producto
-  const [modalMov, setModalMov]           = useState(false);
-  const [loading, setLoading]             = useState(true);
-  const { toasts, show }                  = useToast();
+  const { esAdmin, esOperario, esVendedor } = useAuth();
+
+  const [productos, setProductos]   = useState([]);
+  const [busqueda, setBusqueda]     = useState('');
+  const [tab, setTab]               = useState('todos');
+  const [modalProd, setModalProd]   = useState(null);  // null | 'nuevo' | producto
+  const [modalMov, setModalMov]     = useState(false);
+  const [loading, setLoading]       = useState(true);
+  const { toasts, show }            = useToast();
+
+  // ─── Título y subtítulo según rol ─────────────────────────────────────────
+  // ADMIN ve "Inventario" completo, OPERARIO ve solo piladora, VENDEDOR solo local
+  const titulo   = esOperario ? 'Stock Piladora'
+                 : esVendedor ? 'Stock Local'
+                 : 'Inventario';
+
+  const subtitulo = esOperario ? 'Productos en planta de producción'
+                  : esVendedor ? 'Productos disponibles en el local'
+                  : null; // para ADMIN se calcula abajo con la suma total
 
   async function cargar() {
     try {
+      // El backend ya filtra por rol: OPERARIO→piladora, VENDEDOR→local, ADMIN→todos
       const data = await api.get('/stock');
       setProductos(data);
     } catch (e) {
@@ -46,9 +59,10 @@ export default function Stock() {
       .filter(p => p.nombre.toLowerCase().includes(busqueda.toLowerCase()));
   }, [productos, tab, busqueda]);
 
+  // Solo ADMIN suma ambos stocks; los demás ven solo stockActual
   const valorTotal = useMemo(
-    () => productos.reduce((acc, p) => acc + (p.stockActual + p.stockLocal), 0),
-    [productos]
+    () => productos.reduce((acc, p) => acc + (esAdmin ? p.stockActual + p.stockLocal : p.stockActual), 0),
+    [productos, esAdmin]
   );
 
   async function handleGuardarProducto(datos, id) {
@@ -83,16 +97,21 @@ export default function Stock() {
       {/* Topbar */}
       <div className="stock-topbar">
         <div>
-          <h2 className="stock-title">Inventario</h2>
-          <p className="stock-sub">Total: {valorTotal.toFixed(1)} unidades en stock</p>
+          <h2 className="stock-title">{titulo}</h2>
+          <p className="stock-sub">
+            {subtitulo || `Total: ${valorTotal.toFixed(1)} unidades en stock`}
+          </p>
         </div>
         <div className="stock-actions">
           <button className="btn-secondary" onClick={() => setModalMov(true)}>
             ± Movimiento
           </button>
-          <button className="btn-primary" onClick={() => setModalProd('nuevo')}>
-            + Producto
-          </button>
+          {/* Solo ADMIN puede crear productos nuevos */}
+          {esAdmin && (
+            <button className="btn-primary" onClick={() => setModalProd('nuevo')}>
+              + Producto
+            </button>
+          )}
         </div>
       </div>
 
@@ -129,16 +148,17 @@ export default function Stock() {
                 <th></th>
                 <th>Nombre</th>
                 <th>Categoría</th>
-                <th>Cant. Piladora</th>
-                <th>Cant. Local</th>
+                {/* ADMIN ve ambas columnas; OPERARIO/VENDEDOR solo ven stockActual */}
+                <th>{esVendedor ? 'Cant. Local' : 'Cant. Piladora'}</th>
+                {esAdmin && <th>Cant. Local</th>}
                 <th>Mínimo</th>
                 <th>Unidad</th>
-                <th></th>
+                {esAdmin && <th></th>}
               </tr>
             </thead>
             <tbody>
               {filtrados.length === 0 && (
-                <tr><td colSpan={8} className="empty">Sin resultados</td></tr>
+                <tr><td colSpan={esAdmin ? 8 : 6} className="empty">Sin resultados</td></tr>
               )}
               {filtrados.map(p => (
                 <tr key={p.id} className="stock-row">
@@ -147,15 +167,18 @@ export default function Stock() {
                   </td>
                   <td className="nombre">{p.nombre}</td>
                   <td className="cat">{p.categoria}</td>
-                  <td className="num">{p.stockActual}</td>
-                  <td className="num">{p.stockLocal}</td>
+                  {/* VENDEDOR ve stockLocal en la columna principal */}
+                  <td className="num">{esVendedor ? p.stockLocal : p.stockActual}</td>
+                  {esAdmin && <td className="num">{p.stockLocal}</td>}
                   <td className="num muted">{p.stockMinimo}</td>
                   <td className="muted">{p.unidad}</td>
-                  <td>
-                    <button className="btn-edit" onClick={() => setModalProd(p)}>
-                      Editar
-                    </button>
-                  </td>
+                  {esAdmin && (
+                    <td>
+                      <button className="btn-edit" onClick={() => setModalProd(p)}>
+                        Editar
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -265,8 +288,6 @@ export default function Stock() {
         .btn-edit:hover { color: var(--text-primary); border-color: var(--text-primary); }
 
         @media (max-width: 600px) {
-          .stock-table th:nth-child(5),
-          .stock-row td:nth-child(5),
           .stock-table th:nth-child(3),
           .stock-row td:nth-child(3) { display: none; }
         }

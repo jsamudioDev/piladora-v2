@@ -2,11 +2,22 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+// Primera ruta accesible por rol — hacia donde redirigir si no tiene acceso
+const RUTA_INICIAL = {
+  ADMIN:    '/panel',
+  OPERARIO: '/pilar',
+  VENDEDOR: '/venta',
+};
+
 /**
- * ProtectedRoute — Redirige a /login si el usuario no está autenticado.
- * Si requireAdmin=true, redirige si el usuario no es ADMIN.
+ * ProtectedRoute — Protege rutas según autenticación y rol.
+ *
+ * Props:
+ *   allowedRoles  — array de roles que pueden acceder, ej: ['ADMIN', 'OPERARIO']
+ *                   si no se pasa, cualquier usuario autenticado puede entrar.
+ *   requireAdmin  — (legacy) equivale a allowedRoles={['ADMIN']}
  */
-export default function ProtectedRoute({ children, requireAdmin = false }) {
+export default function ProtectedRoute({ children, allowedRoles, requireAdmin = false }) {
   const { usuario, cargando } = useAuth();
 
   // Mientras verifica el token, mostrar cargando
@@ -22,14 +33,18 @@ export default function ProtectedRoute({ children, requireAdmin = false }) {
     );
   }
 
-  // Si no hay usuario, ir a login
+  // Si no hay sesión, ir a login
   if (!usuario) {
     return <Navigate to="/login" replace />;
   }
 
-  // Si requiere admin y no lo es, ir a panel
-  if (requireAdmin && usuario.rol !== 'ADMIN') {
-    return <Navigate to="/panel" replace />;
+  // Normalizar: requireAdmin=true es igual a allowedRoles=['ADMIN']
+  const rolesPermitidos = requireAdmin ? ['ADMIN'] : allowedRoles;
+
+  // Si hay lista de roles y el usuario no está en ella → redirigir a su ruta inicial
+  if (rolesPermitidos && !rolesPermitidos.includes(usuario.rol)) {
+    const rutaInicial = RUTA_INICIAL[usuario.rol] || '/login';
+    return <Navigate to={rutaInicial} replace />;
   }
 
   return children;

@@ -4,6 +4,22 @@ import api from '../utils/api';
 
 const AuthContext = createContext(null);
 
+// ─── Tabla de permisos por sección ───────────────────────────────────────────
+// Define qué roles pueden acceder a cada sección del sistema.
+// Refleja la tabla de permisos del negocio:
+//   ADMIN    → acceso total
+//   OPERARIO → piladora: pilar y stock (solo piladora)
+//   VENDEDOR → local: ventas y stock (solo local)
+const PERMISOS = {
+  panel:    ['ADMIN'],
+  venta:    ['ADMIN', 'VENDEDOR'],
+  pilar:    ['ADMIN', 'OPERARIO'],
+  stock:    ['ADMIN', 'OPERARIO', 'VENDEDOR'],
+  dinero:   ['ADMIN'],
+  creditos: ['ADMIN'],
+  config:   ['ADMIN'],
+};
+
 /**
  * AuthProvider — Maneja el estado de autenticación global.
  * Guarda token y datos del usuario en localStorage.
@@ -52,11 +68,32 @@ export function AuthProvider({ children }) {
     setUsuario(null);
   }
 
-  // Verificar si es admin
-  const esAdmin = usuario?.rol === 'ADMIN';
+  // ─── Helpers de rol ──────────────────────────────────────────────────────────
+  const esAdmin    = usuario?.rol === 'ADMIN';
+  const esOperario = usuario?.rol === 'OPERARIO';
+  const esVendedor = usuario?.rol === 'VENDEDOR';
+
+  /**
+   * tieneAcceso(seccion) — Retorna true si el usuario puede ver esa sección.
+   * Consulta la tabla PERMISOS definida arriba.
+   */
+  function tieneAcceso(seccion) {
+    if (!usuario) return false;
+    const rolesPermitidos = PERMISOS[seccion] || [];
+    return rolesPermitidos.includes(usuario.rol);
+  }
 
   return (
-    <AuthContext.Provider value={{ usuario, cargando, login, logout, esAdmin }}>
+    <AuthContext.Provider value={{
+      usuario,
+      cargando,
+      login,
+      logout,
+      esAdmin,
+      esOperario,
+      esVendedor,
+      tieneAcceso,
+    }}>
       {children}
     </AuthContext.Provider>
   );

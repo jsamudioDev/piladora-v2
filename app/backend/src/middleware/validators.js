@@ -38,7 +38,7 @@ const validateRegistro = [
     .isLength({ min: 8 }).withMessage('La contraseña debe tener mínimo 8 caracteres'),
   body('rol')
     .trim().escape()
-    .isIn(['ADMIN', 'VENDEDOR']).withMessage('El rol debe ser ADMIN o VENDEDOR'),
+    .isIn(['ADMIN', 'VENDEDOR', 'OPERARIO']).withMessage('El rol debe ser ADMIN, VENDEDOR u OPERARIO'),
   handleValidation,
 ];
 

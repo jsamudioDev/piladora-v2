@@ -72,10 +72,10 @@ router.post('/registro', authMiddleware, requireAdmin, validateRegistro, async (
       return res.status(400).json({ error: 'Nombre, email y contraseña son requeridos' });
     }
 
-    // Validar rol
-    const rolValido = ['ADMIN', 'VENDEDOR'].includes(rol);
+    // Validar rol (3 roles disponibles)
+    const rolValido = ['ADMIN', 'VENDEDOR', 'OPERARIO'].includes(rol);
     if (rol && !rolValido) {
-      return res.status(400).json({ error: 'Rol inválido. Debe ser ADMIN o VENDEDOR' });
+      return res.status(400).json({ error: 'Rol inválido. Debe ser ADMIN, VENDEDOR u OPERARIO' });
     }
 
     // Verificar email único

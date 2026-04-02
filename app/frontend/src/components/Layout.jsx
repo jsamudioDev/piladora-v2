@@ -3,28 +3,38 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
+// Todos los items del menú con sus roles permitidos
 const NAV_ITEMS = [
-  { id: 'panel',  label: 'Panel',  icon: '📊' },
-  { id: 'venta',  label: 'Venta',  icon: '🛒' },
-  { id: 'pilar',  label: 'Pilar',  icon: '⚙️' },
-  { id: 'stock',  label: 'Stock',  icon: '📦' },
-  { id: 'dinero',   label: 'Dinero',   icon: '💰' },
-  { id: 'creditos', label: 'Créditos', icon: '📋' },
-  { id: 'config',   label: 'Config',   icon: '⚙️', adminOnly: true },
+  { id: 'panel',    label: 'Panel',    icon: '📊', roles: ['ADMIN'] },
+  { id: 'venta',    label: 'Venta',    icon: '🛒', roles: ['ADMIN', 'VENDEDOR'] },
+  { id: 'pilar',    label: 'Pilar',    icon: '⚙️', roles: ['ADMIN', 'OPERARIO'] },
+  { id: 'stock',    label: 'Stock',    icon: '📦', roles: ['ADMIN', 'OPERARIO', 'VENDEDOR'] },
+  { id: 'dinero',   label: 'Dinero',   icon: '💰', roles: ['ADMIN'] },
+  { id: 'creditos', label: 'Créditos', icon: '📋', roles: ['ADMIN'] },
+  { id: 'config',   label: 'Config',   icon: '🔧', roles: ['ADMIN'] },
 ];
+
+// Etiqueta legible para mostrar el rol en el badge
+const ROL_LABEL = {
+  ADMIN:    'Admin',
+  OPERARIO: 'Operario',
+  VENDEDOR: 'Vendedor',
+};
 
 export default function Layout({ children, activeModule }) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
-  const { usuario, logout, esAdmin } = useAuth();
+  const { usuario, logout } = useAuth();
 
-  // Filtrar items de navegación según rol
-  const navItems = NAV_ITEMS.filter(item => !item.adminOnly || esAdmin);
+  // Filtrar items de navegación según el rol del usuario
+  const navItems = NAV_ITEMS.filter(item => item.roles.includes(usuario?.rol));
 
   function handleLogout() {
     logout();
     navigate('/login', { replace: true });
   }
+
+  const rolClass = usuario?.rol?.toLowerCase(); // 'admin' | 'operario' | 'vendedor'
 
   return (
     <div className="layout">
@@ -35,8 +45,8 @@ export default function Layout({ children, activeModule }) {
         </button>
         <span className="logo">Piladora</span>
         <div className="mobile-user">
-          <span className={`role-badge role-badge--${usuario?.rol?.toLowerCase()}`}>
-            {usuario?.rol}
+          <span className={`role-badge role-badge--${rolClass}`}>
+            {ROL_LABEL[usuario?.rol] || usuario?.rol}
           </span>
         </div>
       </header>
@@ -73,8 +83,8 @@ export default function Layout({ children, activeModule }) {
             </div>
             <div className="user-details">
               <span className="user-name">{usuario?.nombre}</span>
-              <span className={`role-badge role-badge--${usuario?.rol?.toLowerCase()}`}>
-                {usuario?.rol === 'ADMIN' ? 'Admin' : 'Vendedor'}
+              <span className={`role-badge role-badge--${rolClass}`}>
+                {ROL_LABEL[usuario?.rol] || usuario?.rol}
               </span>
             </div>
           </div>
@@ -246,6 +256,7 @@ export default function Layout({ children, activeModule }) {
           border-radius: 4px;
           width: fit-content;
         }
+        /* Colores por rol */
         .role-badge--admin {
           background: rgba(239, 68, 68, 0.2);
           color: #f87171;
@@ -253,6 +264,10 @@ export default function Layout({ children, activeModule }) {
         .role-badge--vendedor {
           background: rgba(34, 197, 94, 0.2);
           color: #4ade80;
+        }
+        .role-badge--operario {
+          background: rgba(251, 191, 36, 0.2);
+          color: #fbbf24;
         }
         .logout-btn {
           background: rgba(255,255,255,0.06);
