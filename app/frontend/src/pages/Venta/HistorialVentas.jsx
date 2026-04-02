@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
 import api from '../../utils/api';
-import { formatMoney, formatDate } from '../../utils/format';
+import { formatMoney } from '../../utils/format';
+import { useAuth } from '../../context/AuthContext';
 
-export default function HistorialVentas({ onAnulada }) {
-  const [ventas, setVentas]       = useState([]);
-  const [loading, setLoading]     = useState(true);
-  const [expanded, setExpanded]   = useState(null);
-  const [anulando, setAnulando]   = useState(null);
+export default function HistorialVentas({ onAnulada, onDevolver, reloadKey }) {
+  const { esAdmin }              = useAuth();
+  const [ventas, setVentas]      = useState([]);
+  const [loading, setLoading]    = useState(true);
+  const [expanded, setExpanded]  = useState(null);
+  const [anulando, setAnulando]  = useState(null);
 
   async function cargar() {
+    setLoading(true);
     try {
       const data = await api.get('/ventas/hoy');
       setVentas(data);
@@ -17,7 +20,8 @@ export default function HistorialVentas({ onAnulada }) {
     }
   }
 
-  useEffect(() => { cargar(); }, []);
+  // Se recarga cuando el padre incrementa reloadKey (p.ej. tras una devolución exitosa)
+  useEffect(() => { cargar(); }, [reloadKey]);
 
   async function anular(id) {
     if (!window.confirm('¿Anular esta venta? Se restaurará el stock.')) return;
@@ -85,13 +89,25 @@ export default function HistorialVentas({ onAnulada }) {
                   </tbody>
                 </table>
                 {v.nota && <p className="det-nota">Nota: {v.nota}</p>}
-                <button
-                  className="btn-anular"
-                  onClick={() => anular(v.id)}
-                  disabled={anulando === v.id}
-                >
-                  {anulando === v.id ? 'Anulando...' : 'Anular venta'}
-                </button>
+
+                {/* Acciones: Devolver (solo ADMIN) y Anular */}
+                <div className="det-acciones">
+                  {esAdmin && (
+                    <button
+                      className="btn-devolver"
+                      onClick={() => onDevolver?.(v)}
+                    >
+                      ↩ Devolver
+                    </button>
+                  )}
+                  <button
+                    className="btn-anular"
+                    onClick={() => anular(v.id)}
+                    disabled={anulando === v.id}
+                  >
+                    {anulando === v.id ? 'Anulando...' : 'Anular venta'}
+                  </button>
+                </div>
               </div>
             )}
           </li>
@@ -119,6 +135,7 @@ export default function HistorialVentas({ onAnulada }) {
         .badge-efectivo { background: rgba(74,222,128,0.15); color: var(--accent-green); }
         .badge-yappy    { background: rgba(96,165,250,0.15); color: var(--accent-blue); }
         .badge-fiado    { background: rgba(248,113,113,0.15); color: var(--accent-red); }
+        .badge-credito  { background: rgba(251,191,36,0.15);  color: #fbbf24; }
 
         .hist-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
         .hist-monto { font-weight: 700; color: var(--accent-green); }
@@ -132,6 +149,16 @@ export default function HistorialVentas({ onAnulada }) {
         .det-table tr:last-child td { border-bottom: none; }
         .num { text-align: right; }
         .det-nota { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+
+        .det-acciones { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .btn-devolver {
+          background: rgba(96,165,250,0.1); color: var(--accent-blue);
+          border: 1px solid var(--accent-blue); border-radius: 7px;
+          padding: 6px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+          transition: background 0.15s;
+        }
+        .btn-devolver:hover { background: rgba(96,165,250,0.2); }
 
         .btn-anular {
           background: rgba(248,113,113,0.1); color: var(--accent-red);

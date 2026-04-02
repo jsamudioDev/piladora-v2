@@ -57,7 +57,9 @@ app.use('/api/stock',    requireRol('ADMIN', 'OPERARIO', 'VENDEDOR'),  require('
 app.use('/api/dinero',   requireRol('ADMIN'),                          require('./routes/dinero'));
 app.use('/api/creditos', requireRol('ADMIN'),                          require('./routes/creditos'));
 app.use('/api/config',   requireRol('ADMIN'),                          require('./routes/config'));
-app.use('/api/pulidura', requireRol('ADMIN', 'OPERARIO'),              require('./routes/pulidura'));
+app.use('/api/pulidura',     requireRol('ADMIN', 'OPERARIO'),             require('./routes/pulidura'));
+app.use('/api/devoluciones', requireRol('ADMIN'),                         require('./routes/devoluciones'));
+app.use('/api/traspasos',    requireRol('ADMIN', 'OPERARIO'),             require('./routes/traspasos'));
 
 // ─── Iniciar servidor ─────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;

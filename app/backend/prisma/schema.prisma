@@ -40,17 +40,19 @@ model Parametro {
 // ─── MÓDULO: STOCK ────────────────────────────────────────────────────────────
 
 model Producto {
-  id            Int               @id @default(autoincrement())
-  nombre        String
-  unidad        String
-  stockActual   Float             @default(0)
-  stockLocal    Float             @default(0)
-  stockMinimo   Float             @default(0)
-  ubicacion     String            @default("piladora")
-  categoria     String            @default("grano")
-  createdAt     DateTime          @default(now())
-  movimientos   StockMovimiento[]
-  detallesVenta DetalleVenta[]
+  id                  Int                 @id @default(autoincrement())
+  nombre              String
+  unidad              String
+  stockActual         Float               @default(0)
+  stockLocal          Float               @default(0)
+  stockMinimo         Float               @default(0)
+  ubicacion           String              @default("piladora")
+  categoria           String              @default("grano")
+  createdAt           DateTime            @default(now())
+  movimientos         StockMovimiento[]
+  detallesVenta       DetalleVenta[]
+  devolucionesDetalle DetalleDevolucion[]
+  traspasos           Traspaso[]
 }
 
 model StockMovimiento {
@@ -59,6 +61,7 @@ model StockMovimiento {
   tipo       String
   cantidad   Float
   motivo     String?
+  ubicacion  String?  // piladora | local — registra en qué stock ocurrió el movimiento
   createdAt  DateTime @default(now())
   producto   Producto @relation(fields: [productoId], references: [id])
 }
@@ -176,4 +179,39 @@ model Egreso {
   descripcion String
   categoria   String?
   createdAt   DateTime @default(now())
+}
+
+// ─── MÓDULO: DEVOLUCIONES ────────────────────────────────────────────────────
+
+model Devolucion {
+  id            Int                 @id @default(autoincrement())
+  ventaId       Int
+  totalDevuelto Float
+  motivo        String
+  createdAt     DateTime            @default(now())
+  detalles      DetalleDevolucion[]
+}
+
+model DetalleDevolucion {
+  id           Int        @id @default(autoincrement())
+  devolucionId Int
+  productoId   Int
+  cantidad     Float
+  precioUnit   Float
+  ubicacion    String     @default("piladora") // ubicación de la venta original
+  devolucion   Devolucion @relation(fields: [devolucionId], references: [id])
+  producto     Producto   @relation(fields: [productoId], references: [id])
+}
+
+// ─── MÓDULO: TRASPASOS ────────────────────────────────────────────────────────
+
+model Traspaso {
+  id         Int      @id @default(autoincrement())
+  productoId Int
+  cantidad   Float
+  origen     String   // piladora | local
+  destino    String   // piladora | local
+  motivo     String?
+  createdAt  DateTime @default(now())
+  producto   Producto @relation(fields: [productoId], references: [id])
 }

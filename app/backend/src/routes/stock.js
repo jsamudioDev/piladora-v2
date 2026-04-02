@@ -27,6 +27,22 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ─── GET /api/stock/movimientos — historial de movimientos (últimos 50) ──────
+router.get('/movimientos', async (req, res) => {
+  try {
+    const movimientos = await prisma.stockMovimiento.findMany({
+      take: 50,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        producto: { select: { nombre: true, unidad: true } },
+      },
+    });
+    res.json(movimientos);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── GET /api/stock/alertas — productos con stock bajo ───────────────────────
 // Solo accesible por ADMIN (el panel es ADMIN-only y es quien usa alertas)
 router.get('/alertas', async (req, res) => {

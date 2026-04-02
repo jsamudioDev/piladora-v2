@@ -11,14 +11,16 @@ const AuthContext = createContext(null);
 //   OPERARIO → piladora: pilar y stock (solo piladora)
 //   VENDEDOR → local: ventas y stock (solo local)
 const PERMISOS = {
-  panel:    ['ADMIN'],
-  venta:    ['ADMIN', 'VENDEDOR'],
-  pilar:    ['ADMIN', 'OPERARIO'],
-  stock:    ['ADMIN', 'OPERARIO', 'VENDEDOR'],
-  dinero:   ['ADMIN'],
-  creditos: ['ADMIN'],
-  config:   ['ADMIN'],
-  pulidura: ['ADMIN', 'OPERARIO'],
+  panel:        ['ADMIN'],
+  venta:        ['ADMIN', 'VENDEDOR'],
+  pilar:        ['ADMIN', 'OPERARIO'],
+  stock:        ['ADMIN', 'OPERARIO', 'VENDEDOR'],
+  dinero:       ['ADMIN'],
+  creditos:     ['ADMIN'],
+  config:       ['ADMIN'],
+  pulidura:     ['ADMIN', 'OPERARIO'],
+  devoluciones: ['ADMIN'],
+  traspasos:    ['ADMIN', 'OPERARIO'],
 };
 
 /**
