@@ -6,7 +6,13 @@ import { useAuth } from '../../context/AuthContext';
 import HistorialVentas from './HistorialVentas';
 import ModalTicket from './ModalTicket';
 
-const METODOS_PAGO = ['Efectivo', 'Yappy', 'Fiado'];
+const METODOS_PAGO = [
+  { value: 'EFECTIVO',      label: 'Efectivo' },
+  { value: 'YAPPY',         label: 'Yappy' },
+  { value: 'TRANSFERENCIA', label: 'Transferencia' },
+  { value: 'CHEQUE',        label: 'Cheque' },
+  { value: 'CREDITO',       label: 'Fiado (Crédito)' },
+];
 
 // ─── Modal de Devolución ──────────────────────────────────────────────────────
 // Se muestra cuando el ADMIN hace clic en "↩ Devolver" en el historial.
@@ -206,7 +212,7 @@ export default function Venta() {
   const [cantidad, setCantidad]   = useState('');
   const [precioUnit, setPrecioUnit] = useState('');
   const [carrito, setCarrito]     = useState([]);
-  const [metodoPago, setMetodoPago] = useState('Efectivo');
+  const [metodoPago, setMetodoPago] = useState('EFECTIVO');
   const [cliente, setCliente]     = useState('');
   const [enviando, setEnviando]   = useState(false);
   // Modal de devolución: almacena la venta seleccionada o null
@@ -299,7 +305,7 @@ export default function Venta() {
       });
       setCarrito([]);
       setCliente('');
-      setMetodoPago('Efectivo');
+      setMetodoPago('EFECTIVO');
       // Recargar productos para actualizar stock en pantalla
       const fresh = await api.get('/stock');
       setProductos(fresh);
@@ -441,7 +447,7 @@ export default function Venta() {
             <label className="field-label">
               Método de pago
               <select className="field-input" value={metodoPago} onChange={e => setMetodoPago(e.target.value)}>
-                {METODOS_PAGO.map(m => <option key={m} value={m}>{m}</option>)}
+                {METODOS_PAGO.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
               </select>
             </label>
 

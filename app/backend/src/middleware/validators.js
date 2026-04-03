@@ -57,9 +57,8 @@ const validateProducto = [
 ];
 
 // ─── Venta ────────────────────────────────────────────────────────────────────
+// Nota: total NO se valida aquí — el backend lo calcula desde los detalles
 const validateVenta = [
-  body('total')
-    .isFloat({ gt: 0 }).withMessage('El total debe ser mayor a 0'),
   body('metodoPago')
     .trim().escape()
     .notEmpty().withMessage('El método de pago es obligatorio'),
