@@ -1,8 +1,10 @@
 // ─── App principal con autenticación y permisos por rol ──────────────────────
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import InstallBanner from './components/InstallBanner';
 import Login    from './pages/Login/Login';
 import Panel    from './pages/Panel/Panel';
 import Venta    from './pages/Venta/Venta';
@@ -17,11 +19,14 @@ import './App.css';
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <AppRoutes />
+          <InstallBanner />
+        </BrowserRouter>
+      </AuthProvider>
+    </ToastProvider>
   );
 }
 

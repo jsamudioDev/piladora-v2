@@ -1,12 +1,70 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>Piladora — Gestión</title>
+
+    <!-- PWA -->
+    <meta name="theme-color" content="#7c6af7" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Piladora" />
+    <link rel="apple-touch-icon" href="/pwa-192.png" />
+
+    <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+
+    <!-- Splash screen inline styles -->
+    <style>
+      #splash {
+        position: fixed; inset: 0;
+        background: #0f0f14;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 16px;
+        z-index: 99999;
+        transition: opacity 0.35s ease;
+      }
+      #splash.splash--hidden { opacity: 0; pointer-events: none; }
+      #splash-logo {
+        width: 80px; height: 80px;
+        background: linear-gradient(135deg, #7c6af7, #6d28d9);
+        border-radius: 20px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 44px; font-weight: 700; color: #fff;
+        font-family: system-ui, sans-serif;
+      }
+      #splash-name {
+        font-family: system-ui, sans-serif;
+        font-size: 22px; font-weight: 700;
+        color: #e2e8f0; letter-spacing: 0.5px;
+      }
+      #splash-sub {
+        font-family: system-ui, sans-serif;
+        font-size: 13px; color: #94a3b8;
+      }
+      #splash-spinner {
+        width: 28px; height: 28px;
+        border: 3px solid #2d2d3d;
+        border-top-color: #7c6af7;
+        border-radius: 50%;
+        animation: _spin 0.7s linear infinite;
+        margin-top: 8px;
+      }
+      @keyframes _spin { to { transform: rotate(360deg); } }
+    </style>
   </head>
   <body>
+    <!-- Splash screen — se oculta cuando React monta -->
+    <div id="splash">
+      <div id="splash-logo">P</div>
+      <div id="splash-name">Piladora</div>
+      <div id="splash-sub">Sistema de Gestión</div>
+      <div id="splash-spinner"></div>
+    </div>
+
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
