@@ -53,10 +53,11 @@ Dueño: Jacob Samudio | Ubuntu 24.04 | Acer Nitro 5
 - [x] Fase 6 — Devoluciones + Traspasos entre ubicaciones
 - [x] Fase 7 — Bitácora auditoría + Admin Config expandido (perfil, productos, módulos dinámicos)
 - [x] Fase 8 — Tickets de venta + Facturas con ITBMS y numeración correlativa
-- [ ] Fase 9 — Mejoras UI/UX + PWA
+- [x] Fase 9 — PWA instalable + layout responsive + toast + splash screen
 
-## Próximo paso
-Fase 9: Mejoras UI/UX + PWA (instalable en móvil y escritorio)
+## Estado
+✅ PROYECTO COMPLETO — 9 fases implementadas y desplegadas.
+Pendiente: verificar VITE_API_URL en Vercel → Settings → Environment Variables.
 
 ## Arquitectura backend
 - Middleware global: authMiddleware (JWT), apiLimiter, helmet, CORS
