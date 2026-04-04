@@ -2,7 +2,8 @@
 const router = require('express').Router();
 const prisma  = require('../prisma');
 const { authMiddleware, requireAdmin } = require('../middleware/auth');
-const { registrar } = require('../services/bitacoraService');
+const { requireRol }  = require('../middleware/permisos');
+const { registrar }   = require('../services/bitacoraService');
 
 // Todas las rutas requieren token JWT válido
 router.use(authMiddleware);
@@ -83,7 +84,8 @@ router.get('/:id', async (req, res) => {
 });
 
 // ─── POST /api/creditos — crear crédito manualmente (sin venta asociada) ─────
-router.post('/', async (req, res) => {
+// Solo ADMIN y VENDEDOR. OPERARIO no gestiona ventas directas.
+router.post('/', requireRol('ADMIN', 'VENDEDOR'), async (req, res) => {
   try {
     const { clienteNombre, clienteTel, clienteCedula, montoTotal, nota, fechaVencimiento } = req.body;
 
@@ -122,16 +124,11 @@ router.post('/', async (req, res) => {
 });
 
 // ─── PUT /api/creditos/:id — actualizar datos del crédito ────────────────────
-// Permite editar: nota, estado, clienteNombre, clienteTel, clienteCedula, fechaVencimiento
-// Solo ADMIN puede cambiar estado a VENCIDO manualmente
-router.put('/:id', async (req, res) => {
+// Solo ADMIN puede editar los datos del crédito o cambiar su estado.
+router.put('/:id', requireRol('ADMIN'), async (req, res) => {
   try {
     const id = Number(req.params.id);
     const { nota, estado, clienteNombre, clienteTel, clienteCedula, fechaVencimiento } = req.body;
-
-    if (estado === 'VENCIDO' && req.usuario?.rol !== 'ADMIN') {
-      return res.status(403).json({ error: 'Solo el administrador puede marcar créditos como vencidos' });
-    }
 
     const data = {};
     if (nota             !== undefined) data.nota             = nota?.trim() || null;

@@ -11,7 +11,9 @@ function fmtFactura(n) {
 }
 
 export default function HistorialVentas({ onAnulada, onDevolver, reloadKey }) {
-  const { esAdmin }             = useAuth();
+  const { esAdmin, usuario }    = useAuth();
+  // VENDEDOR y OPERARIO pueden ver facturas existentes; solo ADMIN puede generarlas
+  const puedeVerFactura = esAdmin || usuario?.rol === 'VENDEDOR' || usuario?.rol === 'OPERARIO';
   const [ventas, setVentas]     = useState([]);
   const [loading, setLoading]   = useState(true);
   const [expanded, setExpanded] = useState(null);
@@ -119,15 +121,17 @@ export default function HistorialVentas({ onAnulada, onDevolver, reloadKey }) {
                     Ticket
                   </button>
 
-                  {esAdmin && (
+                  {/* Factura: ADMIN puede generar o ver; empleados solo ven si ya existe */}
+                  {(esAdmin || (puedeVerFactura && v.facturaNum)) && (
                     <button
                       className="btn-factura"
                       onClick={() => setFacturaVenta(v)}
                     >
-                      {v.facturaNum ? `Factura ${fmtFactura(v.facturaNum)}` : 'Factura'}
+                      {v.facturaNum ? `Factura ${fmtFactura(v.facturaNum)}` : 'Generar Factura'}
                     </button>
                   )}
 
+                  {/* Devoluciones: solo ADMIN */}
                   {esAdmin && (
                     <button
                       className="btn-devolver"

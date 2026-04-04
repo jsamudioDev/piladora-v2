@@ -46,9 +46,9 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* Venta — ADMIN y VENDEDOR */}
+      {/* Venta — ADMIN, VENDEDOR y OPERARIO (misma empresa, pueden generar y ver tickets) */}
       <Route path="/venta" element={
-        <ProtectedRoute allowedRoles={['ADMIN', 'VENDEDOR']}>
+        <ProtectedRoute allowedRoles={['ADMIN', 'VENDEDOR', 'OPERARIO']}>
           <Layout activeModule="venta"><Venta /></Layout>
         </ProtectedRoute>
       } />
@@ -74,9 +74,9 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* Créditos — solo ADMIN (VENDEDOR crea créditos desde Venta) */}
+      {/* Créditos — ADMIN, VENDEDOR y OPERARIO pueden ver y abonar */}
       <Route path="/creditos" element={
-        <ProtectedRoute allowedRoles={['ADMIN']}>
+        <ProtectedRoute allowedRoles={['ADMIN', 'VENDEDOR', 'OPERARIO']}>
           <Layout activeModule="creditos"><Creditos /></Layout>
         </ProtectedRoute>
       } />

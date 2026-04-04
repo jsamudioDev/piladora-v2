@@ -51,11 +51,13 @@ app.use('/api', authMiddleware);
 // ─── Rutas protegidas (requieren token válido + rol permitido) ────────────────
 // requireRol filtra por rol ANTES de que la petición llegue al router
 app.use('/api/panel',    requireRol('ADMIN'),                          require('./routes/panel'));
-app.use('/api/ventas',   requireRol('ADMIN', 'VENDEDOR'),              require('./routes/ventas'));
+// VENDEDOR y OPERARIO pueden crear ventas, ver historial y anular
+app.use('/api/ventas',   requireRol('ADMIN', 'VENDEDOR', 'OPERARIO'),  require('./routes/ventas'));
 app.use('/api/pilados',  requireRol('ADMIN', 'OPERARIO'),              require('./routes/pilados'));
 app.use('/api/stock',    requireRol('ADMIN', 'OPERARIO', 'VENDEDOR'),  require('./routes/stock'));
 app.use('/api/dinero',   requireRol('ADMIN'),                          require('./routes/dinero'));
-app.use('/api/creditos', requireRol('ADMIN'),                          require('./routes/creditos'));
+// VENDEDOR puede crear créditos manuales y abonar; OPERARIO solo puede ver y abonar
+app.use('/api/creditos', requireRol('ADMIN', 'VENDEDOR', 'OPERARIO'),  require('./routes/creditos'));
 app.use('/api/config',   requireRol('ADMIN'),                          require('./routes/config'));
 app.use('/api/pulidura',     requireRol('ADMIN', 'OPERARIO'),             require('./routes/pulidura'));
 app.use('/api/devoluciones', requireRol('ADMIN'),                         require('./routes/devoluciones'));

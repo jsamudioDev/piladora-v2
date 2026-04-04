@@ -8,11 +8,13 @@ const AuthContext = createContext(null);
 // Refleja los roles por defecto antes de que el ADMIN configure módulos.
 const PERMISOS = {
   panel:        ['ADMIN'],
-  venta:        ['ADMIN', 'VENDEDOR'],
+  // Venta: todos los empleados generan tickets y ven historial de ventas
+  venta:        ['ADMIN', 'VENDEDOR', 'OPERARIO'],
   pilar:        ['ADMIN', 'OPERARIO'],
   stock:        ['ADMIN', 'OPERARIO', 'VENDEDOR'],
   dinero:       ['ADMIN'],
-  creditos:     ['ADMIN'],
+  // Créditos: todos pueden ver y abonar; crear/editar solo ADMIN+VENDEDOR (guardado en backend)
+  creditos:     ['ADMIN', 'VENDEDOR', 'OPERARIO'],
   config:       ['ADMIN'],
   pulidura:     ['ADMIN', 'OPERARIO'],
   bitacora:     ['ADMIN'],

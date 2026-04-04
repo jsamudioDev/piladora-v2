@@ -469,7 +469,9 @@ function ModalNuevoCredito({ onCerrar, onCreado }) {
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function Creditos() {
   const { usuario } = useAuth();
-  const esAdmin = usuario?.rol === 'ADMIN';
+  const esAdmin    = usuario?.rol === 'ADMIN';
+  // VENDEDOR puede crear créditos manuales; OPERARIO solo ve y abona
+  const puedeCrear = usuario?.rol === 'ADMIN' || usuario?.rol === 'VENDEDOR';
 
   const [creditos,      setCreditos]      = useState([]);
   const [cargando,      setCargando]      = useState(true);
@@ -503,9 +505,12 @@ export default function Creditos() {
       {/* HEADER */}
       <div className="cr-topbar">
         <h2 className="cr-page-titulo">Créditos</h2>
-        <button className="btn-nuevo-cr" onClick={() => setMostrarNuevo(true)}>
-          + Nuevo Crédito
-        </button>
+        {/* Solo ADMIN y VENDEDOR pueden crear créditos manuales */}
+        {puedeCrear && (
+          <button className="btn-nuevo-cr" onClick={() => setMostrarNuevo(true)}>
+            + Nuevo Crédito
+          </button>
+        )}
       </div>
 
       {/* CARDS RESUMEN */}
@@ -604,7 +609,7 @@ export default function Creditos() {
           onCambio={cargar}
         />
       )}
-      {mostrarNuevo && (
+      {mostrarNuevo && puedeCrear && (
         <ModalNuevoCredito
           onCerrar={() => setMostrarNuevo(false)}
           onCreado={() => { setMostrarNuevo(false); cargar(); }}

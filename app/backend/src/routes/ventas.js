@@ -132,8 +132,10 @@ router.post('/', validateVenta, async (req, res) => {
   }
 });
 
-// DELETE /api/ventas/:id — anular venta
-router.delete('/:id', async (req, res) => {
+// DELETE /api/ventas/:id — anular venta (ADMIN, VENDEDOR, OPERARIO)
+// Restaura el stock y elimina el ingreso asociado.
+// Todos los roles pueden anular, pero el movimiento queda en bitácora.
+router.delete('/:id', requireRol('ADMIN', 'VENDEDOR', 'OPERARIO'), async (req, res) => {
   try {
     const id = Number(req.params.id);
     const venta = await prisma.venta.findUnique({
@@ -156,6 +158,16 @@ router.delete('/:id', async (req, res) => {
       await tx.detalleVenta.deleteMany({ where: { ventaId: id } });
       await tx.venta.delete({ where: { id } });
       if (venta.ingresoId) await tx.ingreso.delete({ where: { id: venta.ingresoId } }).catch(() => {});
+    });
+
+    // Registrar en bitácora — queda constancia de quién anuló la venta
+    registrar({
+      usuarioId: req.usuario?.id,
+      nombre:    req.usuario?.nombre,
+      modulo:    'venta',
+      accion:    'anular',
+      detalle:   { ventaId: id, total: venta.total, cliente: venta.cliente, metodoPago: venta.metodoPago },
+      ip:        req.ip,
     });
 
     res.json({ ok: true });
@@ -199,7 +211,8 @@ router.put('/:id/editar', requireRol('ADMIN'), async (req, res) => {
 });
 
 // ─── GET /api/ventas/:id/ticket — Datos completos para imprimir ticket ────────
-router.get('/:id/ticket', requireRol('ADMIN', 'VENDEDOR'), async (req, res) => {
+// ADMIN, VENDEDOR y OPERARIO pueden ver tickets (misma empresa)
+router.get('/:id/ticket', requireRol('ADMIN', 'VENDEDOR', 'OPERARIO'), async (req, res) => {
   try {
     const venta = await prisma.venta.findUnique({
       where: { id: Number(req.params.id) },
@@ -281,7 +294,8 @@ router.post('/:id/factura', requireRol('ADMIN'), async (req, res) => {
 });
 
 // ─── GET /api/ventas/:id/factura — Datos completos para imprimir factura ──────
-router.get('/:id/factura', requireRol('ADMIN', 'VENDEDOR'), async (req, res) => {
+// ADMIN, VENDEDOR y OPERARIO pueden ver facturas
+router.get('/:id/factura', requireRol('ADMIN', 'VENDEDOR', 'OPERARIO'), async (req, res) => {
   try {
     const venta = await prisma.venta.findUnique({
       where: { id: Number(req.params.id) },

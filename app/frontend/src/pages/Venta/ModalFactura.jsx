@@ -10,6 +10,7 @@
 
 import { useState, useEffect } from 'react';
 import api from '../../utils/api';
+import { useAuth } from '../../context/AuthContext';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function fmtFecha(iso) {
@@ -31,6 +32,7 @@ const METODO_LABEL = {
 };
 
 export default function ModalFactura({ venta, onClose, onFacturaGenerada }) {
+  const { esAdmin } = useAuth();
   // ─ Formulario paso 1 ────────────────────────────────────────────────────────
   const [clienteNombre,    setClienteNombre]    = useState(venta.cliente         || '');
   const [clienteRuc,       setClienteRuc]       = useState(venta.clienteRuc      || '');
@@ -137,7 +139,27 @@ export default function ModalFactura({ venta, onClose, onFacturaGenerada }) {
     );
   }
 
-  // ─── Formulario (paso 1) ─────────────────────────────────────────────────────
+  // ─── Si no es ADMIN y la venta no tiene factura, mostrar mensaje ────────────
+  if (!facturaData && !esAdmin) {
+    return (
+      <div className="fac-overlay" onClick={onClose}>
+        <div className="fac-modal fac-modal--form" onClick={e => e.stopPropagation()}>
+          <div className="fac-header">
+            <h3 className="fac-title">Factura — Venta #{String(venta.id).padStart(4,'0')}</h3>
+            <button className="fac-close" onClick={onClose}>✕</button>
+          </div>
+          <p style={{ color:'var(--text-secondary)', fontSize:13, padding:'12px 0' }}>
+            Esta venta aún no tiene factura generada. Solo el administrador puede generar nuevas facturas.
+          </p>
+          <div className="fac-footer">
+            <button className="fac-btn-cancelar" onClick={onClose}>Cerrar</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Formulario (paso 1) — solo ADMIN ───────────────────────────────────────
   if (!facturaData) {
     return (
       <div className="fac-overlay" onClick={onClose}>
