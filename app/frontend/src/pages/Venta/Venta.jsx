@@ -11,7 +11,7 @@ const METODOS_PAGO = [
   { value: 'YAPPY',         label: 'Yappy' },
   { value: 'TRANSFERENCIA', label: 'Transferencia' },
   { value: 'CHEQUE',        label: 'Cheque' },
-  { value: 'CREDITO',       label: 'Fiado (Crédito)' },
+  { value: 'CREDITO',       label: 'Crédito' },
 ];
 
 // ─── Modal de Devolución ──────────────────────────────────────────────────────

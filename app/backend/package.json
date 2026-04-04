@@ -23,7 +23,8 @@
     "express-rate-limit": "^8.3.2",
     "express-validator": "^7.3.1",
     "helmet": "^8.1.0",
-    "jsonwebtoken": "^9.0.3"
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^6.10.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.14",

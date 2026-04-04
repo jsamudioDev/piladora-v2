@@ -1,11 +1,23 @@
+// ─── Modal para registrar entradas y salidas de stock ─────────────────────────
+// NUEVO: selector de ubicación (PILADORA / LOCAL) para el ADMIN
+// El stock preview se actualiza según la ubicación seleccionada
+
 import { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
 
 export default function ModalMovimiento({ productos, onGuardar, onCerrar }) {
+  const { usuario } = useAuth();
+  const esAdmin = usuario?.rol === 'ADMIN';
+
+  // Ubicación por defecto según el rol
+  const ubicDefecto = usuario?.rol === 'VENDEDOR' ? 'local' : 'piladora';
+
   const [form, setForm] = useState({
     productoId: productos[0]?.id ?? '',
     tipo:       'ENTRADA',
     cantidad:   '',
     motivo:     '',
+    ubicacion:  ubicDefecto,
   });
 
   function set(key, val) {
@@ -20,10 +32,23 @@ export default function ModalMovimiento({ productos, onGuardar, onCerrar }) {
       tipo:       form.tipo,
       cantidad:   Number(form.cantidad),
       motivo:     form.motivo || null,
+      ubicacion:  form.ubicacion,
     });
   }
 
   const productoSel = productos.find(p => p.id === Number(form.productoId));
+
+  // Stock disponible según la ubicación seleccionada
+  const stockDisponible = productoSel
+    ? (form.ubicacion === 'local' ? productoSel.stockLocal : productoSel.stockActual)
+    : 0;
+
+  // Stock estimado tras el movimiento
+  const stockEstimado = form.cantidad
+    ? (form.tipo === 'ENTRADA'
+        ? stockDisponible + Number(form.cantidad)
+        : stockDisponible - Number(form.cantidad))
+    : null;
 
   return (
     <div className="modal-overlay" onClick={onCerrar}>
@@ -34,6 +59,7 @@ export default function ModalMovimiento({ productos, onGuardar, onCerrar }) {
         </div>
 
         <form className="modal-form" onSubmit={handleSubmit}>
+          {/* Producto */}
           <label>
             Producto
             <select
@@ -42,14 +68,43 @@ export default function ModalMovimiento({ productos, onGuardar, onCerrar }) {
               required
             >
               {productos.map(p => (
-                <option key={p.id} value={p.id}>{p.nombre} ({p.stockActual} {p.unidad})</option>
+                <option key={p.id} value={p.id}>{p.nombre}</option>
               ))}
             </select>
           </label>
 
-          {/* Selector visual de tipo */}
+          {/* Selector de ubicación — solo ADMIN puede elegir */}
+          {esAdmin && (
+            <div>
+              <p className="tipo-label">Destino del movimiento</p>
+              <div className="tipo-toggle">
+                <button
+                  type="button"
+                  className={`tipo-btn tipo-btn--piladora${form.ubicacion === 'piladora' ? ' active' : ''}`}
+                  onClick={() => set('ubicacion', 'piladora')}
+                >
+                  🏭 Piladora
+                  {productoSel && (
+                    <span className="stock-badge">{productoSel.stockActual} {productoSel.unidad}</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className={`tipo-btn tipo-btn--local${form.ubicacion === 'local' ? ' active' : ''}`}
+                  onClick={() => set('ubicacion', 'local')}
+                >
+                  🏪 Local
+                  {productoSel && (
+                    <span className="stock-badge">{productoSel.stockLocal} {productoSel.unidad}</span>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Tipo: Entrada / Salida */}
           <div>
-            <p className="tipo-label">Tipo</p>
+            <p className="tipo-label">Tipo de movimiento</p>
             <div className="tipo-toggle">
               <button
                 type="button"
@@ -68,6 +123,7 @@ export default function ModalMovimiento({ productos, onGuardar, onCerrar }) {
             </div>
           </div>
 
+          {/* Cantidad */}
           <label>
             Cantidad
             <input
@@ -79,25 +135,38 @@ export default function ModalMovimiento({ productos, onGuardar, onCerrar }) {
             />
           </label>
 
+          {/* Motivo */}
           <label>
             Motivo (opcional)
             <input
               value={form.motivo}
               onChange={e => set('motivo', e.target.value)}
-              placeholder="Ej: Compra proveedor, Venta cliente..."
+              placeholder="Ej: Compra proveedor, Transferencia local..."
             />
           </label>
 
-          {/* Preview */}
+          {/* Preview del resultado */}
           {productoSel && form.cantidad && (
             <div className="preview">
-              <span>Resultado estimado:</span>
-              <strong style={{ color: form.tipo === 'ENTRADA' ? 'var(--accent-green)' : 'var(--accent-red)' }}>
-                {form.tipo === 'ENTRADA'
-                  ? productoSel.stockActual + Number(form.cantidad)
-                  : productoSel.stockActual - Number(form.cantidad)
-                } {productoSel.unidad}
-              </strong>
+              <div>
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
+                  Stock {form.ubicacion === 'local' ? 'Local' : 'Piladora'} actual
+                </span>
+                <strong style={{ display: 'block', fontSize: 16 }}>{stockDisponible} {productoSel.unidad}</strong>
+              </div>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 20 }}>→</span>
+              <div>
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Después</span>
+                <strong style={{
+                  display: 'block', fontSize: 16,
+                  color: stockEstimado < 0
+                    ? '#f87171'
+                    : form.tipo === 'ENTRADA' ? 'var(--accent-green)' : 'var(--accent-red)',
+                }}>
+                  {stockEstimado} {productoSel.unidad}
+                  {stockEstimado < 0 && ' ⚠️'}
+                </strong>
+              </div>
             </div>
           )}
 
@@ -117,8 +186,8 @@ export default function ModalMovimiento({ productos, onGuardar, onCerrar }) {
         }
         .modal {
           background: var(--bg-card); border: 1px solid var(--border);
-          border-radius: 14px; width: 100%; max-width: 420px;
-          padding: 24px;
+          border-radius: 14px; width: 100%; max-width: 440px;
+          padding: 24px; max-height: 90vh; overflow-y: auto;
         }
         .modal-header {
           display: flex; align-items: center; justify-content: space-between;
@@ -130,7 +199,6 @@ export default function ModalMovimiento({ productos, onGuardar, onCerrar }) {
           font-size: 18px; cursor: pointer; padding: 4px;
         }
         .modal-close:hover { color: var(--text-primary); }
-
         .modal-form { display: flex; flex-direction: column; gap: 14px; }
         .modal-form label {
           display: flex; flex-direction: column; gap: 6px;
@@ -144,13 +212,21 @@ export default function ModalMovimiento({ productos, onGuardar, onCerrar }) {
         }
         .modal-form input:focus,
         .modal-form select:focus { border-color: var(--accent-purple); }
-
         .tipo-label { font-size: 13px; color: var(--text-secondary); margin: 0 0 6px; }
         .tipo-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .tipo-btn {
-          padding: 10px; border-radius: 8px; border: 1px solid var(--border);
-          background: none; color: var(--text-secondary); font-size: 14px;
+          padding: 10px 8px; border-radius: 8px; border: 1px solid var(--border);
+          background: none; color: var(--text-secondary); font-size: 13px;
           font-weight: 600; cursor: pointer; transition: all 0.15s;
+          display: flex; flex-direction: column; align-items: center; gap: 3px;
+        }
+        .tipo-btn--piladora.active {
+          background: rgba(124,106,247,0.15); color: var(--accent-purple);
+          border-color: var(--accent-purple);
+        }
+        .tipo-btn--local.active {
+          background: rgba(251,191,36,0.15); color: #fbbf24;
+          border-color: #fbbf24;
         }
         .tipo-btn--entrada.active {
           background: rgba(74,222,128,0.15); color: var(--accent-green);
@@ -160,15 +236,16 @@ export default function ModalMovimiento({ productos, onGuardar, onCerrar }) {
           background: rgba(248,113,113,0.15); color: var(--accent-red);
           border-color: var(--accent-red);
         }
-
-        .preview {
-          display: flex; align-items: center; justify-content: space-between;
-          background: var(--bg-base); border: 1px solid var(--border);
-          border-radius: 8px; padding: 10px 14px; font-size: 13px;
-          color: var(--text-secondary);
+        .stock-badge {
+          font-size: 11px; font-weight: 400; color: var(--text-secondary);
+          background: var(--bg-base); border-radius: 10px; padding: 1px 6px;
         }
-        .preview strong { font-size: 16px; }
-
+        .preview {
+          display: flex; align-items: center; justify-content: space-around;
+          gap: 12px;
+          background: var(--bg-base); border: 1px solid var(--border);
+          border-radius: 8px; padding: 12px 14px;
+        }
         .modal-footer { display: flex; gap: 10px; margin-top: 4px; }
         .btn-cancel {
           flex: 1; padding: 10px; border-radius: 8px;

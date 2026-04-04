@@ -3,6 +3,7 @@ const prisma  = require('../prisma');
 const { validateVenta }  = require('../middleware/validators');
 const { registrar }      = require('../services/bitacoraService');
 const { requireRol }     = require('../middleware/permisos');
+const { enviarFactura, generarHTMLFactura } = require('../services/emailService');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function hoy() {
@@ -163,6 +164,40 @@ router.delete('/:id', async (req, res) => {
   }
 });
 
+// ─── PUT /api/ventas/:id/editar — editar datos del ticket/factura ─────────────
+// Permite corregir: cliente, nota, clienteRuc, clienteDireccion (no modifica total ni detalles)
+router.put('/:id/editar', requireRol('ADMIN'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { cliente, nota, clienteRuc, clienteDireccion } = req.body;
+
+    const data = {};
+    if (cliente          !== undefined) data.cliente          = cliente?.trim()          || null;
+    if (nota             !== undefined) data.nota             = nota?.trim()             || null;
+    if (clienteRuc       !== undefined) data.clienteRuc       = clienteRuc?.trim()       || null;
+    if (clienteDireccion !== undefined) data.clienteDireccion = clienteDireccion?.trim() || null;
+
+    const venta = await prisma.venta.update({
+      where:   { id },
+      data,
+      include: { detalles: { include: { producto: true } } },
+    });
+
+    // Si hay crédito asociado y cambió el nombre del cliente, sincronizar
+    if (venta.creditoId && cliente !== undefined) {
+      await prisma.credito.update({
+        where: { id: venta.creditoId },
+        data:  { clienteNombre: cliente?.trim() || 'Cliente' },
+      });
+    }
+
+    registrar({ usuarioId: req.usuario?.id, nombre: req.usuario?.nombre, modulo: 'venta', accion: 'editar', detalle: { ventaId: id, cambios: Object.keys(data) }, ip: req.ip });
+    res.json(venta);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── GET /api/ventas/:id/ticket — Datos completos para imprimir ticket ────────
 router.get('/:id/ticket', requireRol('ADMIN', 'VENDEDOR'), async (req, res) => {
   try {
@@ -175,15 +210,14 @@ router.get('/:id/ticket', requireRol('ADMIN', 'VENDEDOR'), async (req, res) => {
     });
     if (!venta) return res.status(404).json({ error: 'Venta no encontrada' });
 
-    // Obtener parámetros de la empresa
+    // Obtener todos los parámetros de la empresa (incluye dv_empresa, email_empresa)
     const params = await prisma.parametro.findMany({
-      where: { clave: { in: ['nombre_empresa', 'ruc_empresa', 'direccion_empresa', 'telefono_empresa', 'itbms_porcentaje'] } },
+      where: { clave: { in: ['nombre_empresa', 'ruc_empresa', 'dv_empresa', 'direccion_empresa', 'telefono_empresa', 'email_empresa', 'itbms_porcentaje'] } },
     });
     const empresa = Object.fromEntries(params.map(p => [p.clave, p.valor]));
 
     res.json({ venta, empresa });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: 'Error al obtener datos del ticket' });
   }
 });
@@ -260,20 +294,70 @@ router.get('/:id/factura', requireRol('ADMIN', 'VENDEDOR'), async (req, res) => 
     if (!venta.facturaNum) return res.status(404).json({ error: 'Esta venta no tiene factura generada' });
 
     const params = await prisma.parametro.findMany({
-      where: { clave: { in: ['nombre_empresa', 'ruc_empresa', 'direccion_empresa', 'telefono_empresa', 'itbms_porcentaje'] } },
+      where: { clave: { in: ['nombre_empresa', 'ruc_empresa', 'dv_empresa', 'direccion_empresa', 'telefono_empresa', 'email_empresa', 'itbms_porcentaje'] } },
     });
     const empresa = Object.fromEntries(params.map(p => [p.clave, p.valor]));
 
-    // Calcular montos con/sin ITBMS
-    const subtotal     = venta.total;
-    const itbmsPct     = parseFloat(empresa.itbms_porcentaje || '7') / 100;
-    const itbmsMonto   = venta.aplicaITBMS ? parseFloat((subtotal * itbmsPct).toFixed(2)) : 0;
-    const totalConITBMS = parseFloat((subtotal + itbmsMonto).toFixed(2));
+    // Si aplicaITBMS, el total ya incluye el impuesto (precio con IVA)
+    // → base = total / (1 + pct)
+    const itbmsPct      = parseFloat(empresa.itbms_porcentaje || '7') / 100;
+    const baseImponible = venta.aplicaITBMS
+      ? parseFloat((venta.total / (1 + itbmsPct)).toFixed(2))
+      : venta.total;
+    const itbmsMonto    = venta.aplicaITBMS
+      ? parseFloat((venta.total - baseImponible).toFixed(2))
+      : 0;
 
-    res.json({ venta, empresa, subtotal, itbmsMonto, totalConITBMS });
+    res.json({ venta, empresa, baseImponible, itbmsMonto });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Error al obtener factura' });
+  }
+});
+
+// ─── POST /api/ventas/:id/factura/email — Enviar factura por correo ───────────
+// Requiere que la venta ya tenga facturaNum. Usa SMTP configurado en Parametros.
+router.post('/:id/factura/email', requireRol('ADMIN'), async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { emailDestinatario } = req.body;
+
+    if (!emailDestinatario || !emailDestinatario.includes('@')) {
+      return res.status(400).json({ error: 'Correo electrónico inválido' });
+    }
+
+    const venta = await prisma.venta.findUnique({
+      where: { id },
+      include: {
+        detalles: { include: { producto: true } },
+        usuario:  { select: { nombre: true } },
+      },
+    });
+    if (!venta) return res.status(404).json({ error: 'Venta no encontrada' });
+    if (!venta.facturaNum) {
+      return res.status(400).json({ error: 'Esta venta no tiene factura generada. Genera la factura primero.' });
+    }
+
+    // Obtener todos los parámetros (necesarios para el HTML y el SMTP)
+    const params  = await prisma.parametro.findMany();
+    const empresa = Object.fromEntries(params.map(p => [p.clave, p.valor]));
+
+    const html = generarHTMLFactura(venta, empresa);
+
+    await enviarFactura({
+      destinatario: emailDestinatario,
+      asunto: `Factura F-${String(venta.facturaNum).padStart(4, '0')} — ${empresa.nombre_empresa || 'Piladora'}`,
+      html,
+    });
+
+    registrar({ usuarioId: req.usuario?.id, nombre: req.usuario?.nombre, modulo: 'venta', accion: 'email_factura', detalle: { ventaId: id, facturaNum: venta.facturaNum, destinatario: emailDestinatario }, ip: req.ip });
+    res.json({ ok: true, mensaje: `Factura enviada a ${emailDestinatario}` });
+  } catch (err) {
+    // Error descriptivo si el SMTP no está configurado o falla autenticación
+    if (err.message.includes('SMTP') || err.message.includes('auth') || err.message.includes('connect') || err.message.includes('configurado')) {
+      return res.status(503).json({ error: err.message });
+    }
+    res.status(500).json({ error: err.message });
   }
 });
 

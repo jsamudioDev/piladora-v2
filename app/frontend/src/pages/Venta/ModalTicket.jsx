@@ -1,211 +1,309 @@
+// ─── Modal Ticket de Venta ─────────────────────────────────────────────────────
+// Muestra recibo térmico con opción de imprimir.
+// NUEVO: ADMIN puede editar datos del ticket (cliente, nota) y de la empresa.
+
 import { useState, useEffect } from 'react';
 import api from '../../utils/api';
+import { useAuth } from '../../context/AuthContext';
 
-// Formatea una fecha ISO a dd/mm/yyyy hh:mm
 function fmtFecha(iso) {
-  const d   = new Date(iso);
-  const pad = n => String(n).padStart(2, '0');
-  return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const d = new Date(iso);
+  const p = n => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth()+1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 }
+function fmtMoney(n) { return '$' + Number(n || 0).toFixed(2); }
 
-function fmtMoney(n) {
-  return '$' + Number(n || 0).toFixed(2);
-}
-
-// Centra un string dentro de un ancho fijo (solo para texto preformateado)
-function centrar(str, ancho = 36) {
-  const pad = Math.max(0, Math.floor((ancho - str.length) / 2));
-  return ' '.repeat(pad) + str;
-}
-
-/**
- * ModalTicket — se muestra al completar una venta o al pulsar "Ticket" en historial.
- * Carga los datos del ticket desde GET /api/ventas/:id/ticket
- * y renderiza una vista previa de recibo térmico.
- */
 export default function ModalTicket({ ventaId, onClose }) {
-  const [datos,   setDatos]   = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState('');
+  const { usuario } = useAuth();
+  const esAdmin = usuario?.rol === 'ADMIN';
 
-  useEffect(() => {
-    api.get(`/ventas/${ventaId}/ticket`)
-      .then(d  => setDatos(d))
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [ventaId]);
+  const [datos,    setDatos]    = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState('');
 
-  if (loading) {
-    return (
-      <div className="tk-overlay" onClick={onClose}>
-        <div className="tk-modal" onClick={e => e.stopPropagation()}>
-          <p className="tk-loading">Cargando ticket...</p>
-        </div>
-      </div>
-    );
+  const [editandoTicket,   setEditandoTicket]   = useState(false);
+  const [eCliente,         setECliente]         = useState('');
+  const [eNota,            setENota]            = useState('');
+  const [guardandoTicket,  setGuardandoTicket]  = useState(false);
+
+  const [editandoEmpresa,  setEditandoEmpresa]  = useState(false);
+  const [eEmpresa,         setEEmpresa]         = useState({});
+  const [guardandoEmpresa, setGuardandoEmpresa] = useState(false);
+
+  async function cargar() {
+    setLoading(true);
+    try {
+      const d = await api.get(`/ventas/${ventaId}/ticket`);
+      setDatos(d);
+      setECliente(d.venta.cliente || '');
+      setENota(d.venta.nota || '');
+      setEEmpresa({ ...d.empresa });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  if (error) {
-    return (
-      <div className="tk-overlay" onClick={onClose}>
-        <div className="tk-modal" onClick={e => e.stopPropagation()}>
-          <p className="tk-error">{error}</p>
-          <button className="tk-btn-cerrar" onClick={onClose}>Cerrar</button>
-        </div>
-      </div>
-    );
+  useEffect(() => { cargar(); }, [ventaId]);
+
+  async function guardarTicket() {
+    setGuardandoTicket(true);
+    try {
+      await api.put(`/ventas/${ventaId}/editar`, { cliente: eCliente || null, nota: eNota || null });
+      await cargar();
+      setEditandoTicket(false);
+    } catch (e) {
+      alert('Error: ' + e.message);
+    } finally {
+      setGuardandoTicket(false);
+    }
   }
+
+  async function guardarEmpresa() {
+    setGuardandoEmpresa(true);
+    try {
+      const claves = ['nombre_empresa', 'ruc_empresa', 'dv_empresa', 'direccion_empresa', 'telefono_empresa', 'email_empresa'];
+      for (const clave of claves) {
+        await api.put(`/config/parametros/${clave}`, { valor: eEmpresa[clave] || '' });
+      }
+      await cargar();
+      setEditandoEmpresa(false);
+    } catch (e) {
+      alert('Error al guardar: ' + e.message);
+    } finally {
+      setGuardandoEmpresa(false);
+    }
+  }
+
+  if (loading) return (
+    <div className="tk-overlay" onClick={onClose}>
+      <div className="tk-modal" onClick={e=>e.stopPropagation()}>
+        <p style={{ color:'var(--text-secondary)', textAlign:'center', padding:24 }}>Cargando...</p>
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="tk-overlay" onClick={onClose}>
+      <div className="tk-modal" onClick={e=>e.stopPropagation()}>
+        <p style={{ color:'#f87171', padding:20 }}>{error}</p>
+        <button style={{ margin:'0 20px 20px' }} onClick={onClose}>Cerrar</button>
+      </div>
+    </div>
+  );
 
   const { venta, empresa } = datos;
-  const numTicket = String(venta.id).padStart(4, '0');
+  const numTicket    = String(venta.id).padStart(4, '0');
+  const rucCompleto  = [empresa.ruc_empresa, empresa.dv_empresa].filter(Boolean).join('-');
+  const itbmsPct     = parseFloat(empresa.itbms_porcentaje || '7') / 100;
+  const baseImponible = venta.aplicaITBMS ? venta.total / (1 + itbmsPct) : venta.total;
+  const itbmsMonto    = venta.aplicaITBMS ? venta.total - baseImponible : 0;
+
+  const METODO_LABEL = {
+    EFECTIVO:'Efectivo', YAPPY:'Yappy', TRANSFERENCIA:'Transferencia',
+    CHEQUE:'Cheque', CREDITO:'Crédito',
+  };
 
   return (
     <div className="tk-overlay" onClick={onClose}>
-      <div className="tk-modal" onClick={e => e.stopPropagation()}>
+      <div className="tk-modal" onClick={e=>e.stopPropagation()}>
 
-        {/* Botones de acción (ocultos al imprimir) */}
-        <div className="tk-actions no-print">
-          <button className="tk-btn-imprimir" onClick={() => window.print()}>
-            Imprimir
-          </button>
-          <button className="tk-btn-cerrar" onClick={onClose}>Cerrar</button>
+        {/* Barra de acciones */}
+        <div className="tk-topbar">
+          <span style={{ fontWeight:600, fontSize:15 }}>Ticket #{numTicket}</span>
+          <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+            {esAdmin && (
+              <>
+                <button className="tk-btn-edit" onClick={()=>{ setEditandoTicket(v=>!v); setEditandoEmpresa(false); }}>
+                  ✏️ Ticket
+                </button>
+                <button className="tk-btn-edit" onClick={()=>{ setEditandoEmpresa(v=>!v); setEditandoTicket(false); }}>
+                  🏢 Empresa
+                </button>
+              </>
+            )}
+            <button className="tk-btn-print" onClick={()=>window.print()}>🖨️ Imprimir</button>
+            <button className="tk-btn-close" onClick={onClose}>✕</button>
+          </div>
         </div>
 
-        {/* ─── Área imprimible — recibo térmico ─────────────────────────────── */}
-        <div className="print-area tk-recibo">
-
-          {/* Encabezado empresa */}
-          <div className="tk-empresa">
-            <div className="tk-empresa-nombre">{empresa.nombre_empresa || 'Piladora'}</div>
-            {empresa.ruc_empresa    && <div>RUC: {empresa.ruc_empresa}</div>}
-            {empresa.direccion_empresa && <div>{empresa.direccion_empresa}</div>}
-            {empresa.telefono_empresa  && <div>Tel: {empresa.telefono_empresa}</div>}
-          </div>
-
-          <div className="tk-sep">{'─'.repeat(32)}</div>
-
-          {/* Datos de la venta */}
-          <div className="tk-titulo">TICKET DE VENTA</div>
-          <div className="tk-linea"><span>Ticket #</span><span>{numTicket}</span></div>
-          <div className="tk-linea"><span>Fecha</span><span>{fmtFecha(venta.createdAt)}</span></div>
-          {venta.usuario?.nombre && (
-            <div className="tk-linea"><span>Vendedor</span><span>{venta.usuario.nombre}</span></div>
-          )}
-          <div className="tk-linea"><span>Pago</span><span>{venta.metodoPago}</span></div>
-          {venta.cliente && (
-            <div className="tk-linea"><span>Cliente</span><span>{venta.cliente}</span></div>
-          )}
-          <div className="tk-linea"><span>Ubicación</span><span>{venta.ubicacion}</span></div>
-
-          <div className="tk-sep">{'─'.repeat(32)}</div>
-
-          {/* Productos */}
-          <div className="tk-col-header">
-            <span className="tk-col-prod">Producto</span>
-            <span className="tk-col-cant">Cant</span>
-            <span className="tk-col-pu">P.U.</span>
-            <span className="tk-col-sub">Sub</span>
-          </div>
-          <div className="tk-sep tk-sep--thin">{'·'.repeat(32)}</div>
-
-          {venta.detalles.map(d => (
-            <div key={d.id} className="tk-item">
-              <div className="tk-item-nombre">{d.producto.nombre}</div>
-              <div className="tk-item-row">
-                <span className="tk-col-cant">{d.cantidad}</span>
-                <span className="tk-col-pu">{fmtMoney(d.precioUnit)}</span>
-                <span className="tk-col-sub">{fmtMoney(d.subtotal)}</span>
-              </div>
+        {/* Panel edición del ticket */}
+        {editandoTicket && esAdmin && (
+          <div className="tk-edit-panel">
+            <h4 style={{ margin:'0 0 10px', fontSize:13 }}>Editar datos del ticket</h4>
+            <label>Cliente<input value={eCliente} onChange={e=>setECliente(e.target.value)} placeholder="Nombre del cliente" /></label>
+            <label>Nota<input value={eNota} onChange={e=>setENota(e.target.value)} placeholder="Observaciones..." /></label>
+            <div style={{ display:'flex', gap:8, marginTop:8 }}>
+              <button className="tk-btn-cancel" onClick={()=>setEditandoTicket(false)}>Cancelar</button>
+              <button className="tk-btn-save" onClick={guardarTicket} disabled={guardandoTicket}>
+                {guardandoTicket ? 'Guardando...' : 'Guardar'}
+              </button>
             </div>
-          ))}
+          </div>
+        )}
 
-          <div className="tk-sep">{'─'.repeat(32)}</div>
+        {/* Panel edición de empresa */}
+        {editandoEmpresa && esAdmin && (
+          <div className="tk-edit-panel">
+            <h4 style={{ margin:'0 0 10px', fontSize:13 }}>Datos de empresa (aplican en todos los documentos)</h4>
+            {[
+              { key:'nombre_empresa',    label:'Nombre empresa' },
+              { key:'ruc_empresa',       label:'RUC (sin DV)' },
+              { key:'dv_empresa',        label:'Dígito Verificador (DV)' },
+              { key:'direccion_empresa', label:'Dirección' },
+              { key:'telefono_empresa',  label:'Teléfono' },
+              { key:'email_empresa',     label:'Correo electrónico' },
+            ].map(({ key, label }) => (
+              <label key={key}>
+                {label}
+                <input
+                  value={eEmpresa[key] || ''}
+                  onChange={e=>setEEmpresa(prev=>({ ...prev, [key]: e.target.value }))}
+                  placeholder={label}
+                />
+              </label>
+            ))}
+            <div style={{ display:'flex', gap:8, marginTop:8 }}>
+              <button className="tk-btn-cancel" onClick={()=>setEditandoEmpresa(false)}>Cancelar</button>
+              <button className="tk-btn-save" onClick={guardarEmpresa} disabled={guardandoEmpresa}>
+                {guardandoEmpresa ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        )}
 
-          {/* Total */}
-          <div className="tk-total-row">
-            <span>TOTAL</span>
-            <span className="tk-total-monto">{fmtMoney(venta.total)}</span>
+        {/* Vista imprimible del ticket */}
+        <div className="ticket-print">
+          <div style={{ textAlign:'center' }}>
+            <p className="tk-empresa">{empresa.nombre_empresa || 'Piladora'}</p>
+            {rucCompleto  && <p className="tk-sub">RUC: {rucCompleto}</p>}
+            {empresa.direccion_empresa && <p className="tk-sub">{empresa.direccion_empresa}</p>}
+            {empresa.telefono_empresa  && <p className="tk-sub">Tel: {empresa.telefono_empresa}</p>}
+            <p className="tk-sep">{'─'.repeat(30)}</p>
+            <p className="tk-titulo">TIQUETE DE VENTA</p>
+            <p className="tk-sub">No. {numTicket}</p>
+            <p className="tk-sub">{fmtFecha(venta.createdAt)}</p>
+            {venta.usuario?.nombre && <p className="tk-sub">Vendedor: {venta.usuario.nombre}</p>}
+            {venta.cliente         && <p className="tk-sub">Cliente: {venta.cliente}</p>}
+            <p className="tk-sep">{'─'.repeat(30)}</p>
           </div>
 
-          <div className="tk-sep">{'─'.repeat(32)}</div>
+          <table className="tk-tabla">
+            <thead>
+              <tr>
+                <th style={{ textAlign:'left' }}>Producto</th>
+                <th style={{ textAlign:'center' }}>Qty</th>
+                <th style={{ textAlign:'right' }}>P.U.</th>
+                <th style={{ textAlign:'right' }}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {venta.detalles.map(d => (
+                <tr key={d.id}>
+                  <td style={{ maxWidth:90, wordBreak:'break-word' }}>{d.producto?.nombre}</td>
+                  <td style={{ textAlign:'center' }}>{d.cantidad}</td>
+                  <td style={{ textAlign:'right', whiteSpace:'nowrap' }}>{fmtMoney(d.precioUnit)}</td>
+                  <td style={{ textAlign:'right', whiteSpace:'nowrap' }}>{fmtMoney(d.subtotal)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-          {/* Pie */}
-          {venta.nota && <div className="tk-nota">Nota: {venta.nota}</div>}
-          <div className="tk-gracias">¡Gracias por su compra!</div>
+          <p className="tk-sep">{'─'.repeat(30)}</p>
 
+          <div className="tk-totales">
+            {venta.aplicaITBMS && (
+              <>
+                <div className="tk-total-row">
+                  <span>Base imponible:</span><span>{fmtMoney(baseImponible)}</span>
+                </div>
+                <div className="tk-total-row">
+                  <span>ITBMS ({empresa.itbms_porcentaje || 7}%):</span><span>{fmtMoney(itbmsMonto)}</span>
+                </div>
+              </>
+            )}
+            <div className="tk-total-row tk-total-final">
+              <span>TOTAL:</span><span>{fmtMoney(venta.total)}</span>
+            </div>
+            <div className="tk-total-row">
+              <span>Forma de pago:</span>
+              <span>{METODO_LABEL[venta.metodoPago] || venta.metodoPago}</span>
+            </div>
+            {venta.metodoPago === 'CREDITO' && (
+              <div className="tk-total-row" style={{ color:'#f87171' }}>
+                <span>⚠️ Pendiente de cobro</span>
+              </div>
+            )}
+          </div>
+
+          {venta.nota && (
+            <p style={{ fontSize:11, color:'#888', marginTop:8, textAlign:'center' }}>Nota: {venta.nota}</p>
+          )}
+
+          <p className="tk-sep">{'─'.repeat(30)}</p>
+          <p style={{ textAlign:'center', fontSize:11, color:'#888', margin:'4px 0' }}>¡Gracias por su compra!</p>
+          {empresa.email_empresa && (
+            <p style={{ textAlign:'center', fontSize:10, color:'#888' }}>{empresa.email_empresa}</p>
+          )}
         </div>
-        {/* fin print-area */}
-
       </div>
 
       <style>{`
-        /* ─── Overlay y contenedor ─── */
         .tk-overlay {
-          position: fixed; inset: 0; background: rgba(0,0,0,0.65);
-          display: flex; align-items: center; justify-content: center;
-          z-index: 1000; padding: 20px;
+          position:fixed; inset:0; background:rgba(0,0,0,0.7);
+          display:flex; align-items:center; justify-content:center;
+          z-index:600; padding:16px;
         }
         .tk-modal {
-          background: var(--bg-card); border: 1px solid var(--border);
-          border-radius: 14px; padding: 20px;
-          display: flex; flex-direction: column; gap: 16px;
-          max-height: 90vh; overflow-y: auto;
+          background:var(--bg-card); border:1px solid var(--border);
+          border-radius:14px; width:100%; max-width:420px;
+          max-height:92vh; overflow-y:auto; padding:20px;
         }
-        .tk-loading, .tk-error {
-          color: var(--text-secondary); font-size: 14px;
-          text-align: center; padding: 24px;
+        .tk-topbar {
+          display:flex; align-items:center; justify-content:space-between;
+          margin-bottom:12px; flex-wrap:wrap; gap:8px;
         }
+        .tk-btn-print { background:var(--accent-purple); color:#fff; border:none; border-radius:8px; padding:7px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+        .tk-btn-edit  { background:var(--bg-base); color:var(--text-secondary); border:1px solid var(--border); border-radius:8px; padding:7px 12px; font-size:12px; font-weight:600; cursor:pointer; }
+        .tk-btn-close { background:none; border:none; color:var(--text-secondary); font-size:18px; cursor:pointer; padding:4px; }
 
-        /* ─── Botones de acción ─── */
-        .tk-actions { display: flex; gap: 10px; justify-content: flex-end; }
-        .tk-btn-imprimir {
-          background: var(--accent-purple); color: #fff; border: none;
-          border-radius: 8px; padding: 8px 18px; font-size: 14px;
-          font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+        .tk-edit-panel {
+          background:var(--bg-base); border:1px solid var(--accent-purple);
+          border-radius:10px; padding:14px; margin-bottom:14px;
+          display:flex; flex-direction:column; gap:8px;
         }
-        .tk-btn-imprimir:hover { opacity: 0.85; }
-        .tk-btn-cerrar {
-          background: none; border: 1px solid var(--border);
-          color: var(--text-secondary); border-radius: 8px;
-          padding: 8px 14px; font-size: 14px; cursor: pointer;
-        }
-        .tk-btn-cerrar:hover { border-color: var(--text-secondary); }
+        .tk-edit-panel label { display:flex; flex-direction:column; gap:4px; font-size:12px; color:var(--text-secondary); }
+        .tk-edit-panel input { background:var(--bg-card); border:1px solid var(--border); border-radius:6px; padding:7px 10px; color:var(--text-primary); font-size:13px; outline:none; }
+        .tk-edit-panel input:focus { border-color:var(--accent-purple); }
+        .tk-btn-save   { flex:2; padding:8px; border-radius:7px; background:var(--accent-purple); color:#fff; border:none; font-size:13px; font-weight:600; cursor:pointer; }
+        .tk-btn-cancel { flex:1; padding:8px; border-radius:7px; border:1px solid var(--border); background:none; color:var(--text-secondary); font-size:13px; cursor:pointer; }
 
-        /* ─── Recibo térmico ─── */
-        .tk-recibo {
-          font-family: var(--mono); font-size: 12px; line-height: 1.5;
-          color: #111; background: #fff;
-          width: 300px; padding: 16px 14px;
-          border-radius: 6px;
+        .ticket-print {
+          font-family:'Courier New',monospace; font-size:12px; color:#222;
+          background:#fff; border-radius:8px; padding:16px;
+          max-width:320px; margin:0 auto; border:1px dashed #ccc;
         }
-        .tk-empresa { text-align: center; margin-bottom: 6px; }
-        .tk-empresa-nombre { font-size: 14px; font-weight: 700; text-transform: uppercase; }
-        .tk-sep { color: #555; text-align: center; margin: 4px 0; }
-        .tk-sep--thin { color: #aaa; }
-        .tk-titulo { text-align: center; font-weight: 700; font-size: 13px; margin: 4px 0; }
-        .tk-linea {
-          display: flex; justify-content: space-between;
-          gap: 6px; font-size: 11px;
+        .tk-empresa { font-size:15px; font-weight:bold; margin:0 0 2px; }
+        .tk-titulo  { font-size:13px; font-weight:bold; margin:4px 0 2px; letter-spacing:1px; }
+        .tk-sub     { margin:1px 0; font-size:11px; color:#555; }
+        .tk-sep     { color:#aaa; font-size:11px; margin:5px 0; }
+
+        .tk-tabla { width:100%; border-collapse:collapse; font-size:11px; margin:6px 0; }
+        .tk-tabla th { font-weight:bold; padding:2px 4px; border-bottom:1px solid #ccc; }
+        .tk-tabla td { padding:2px 4px; }
+
+        .tk-totales { display:flex; flex-direction:column; gap:3px; }
+        .tk-total-row { display:flex; justify-content:space-between; font-size:12px; padding:1px 0; }
+        .tk-total-final { font-size:15px; font-weight:bold; border-top:1px solid #222; padding-top:4px; margin-top:2px; }
+
+        @media print {
+          body > *:not(.tk-overlay) { display:none !important; }
+          .tk-overlay { position:static; background:none !important; }
+          .tk-modal { box-shadow:none; border:none; max-height:none; padding:0; overflow:visible; }
+          .tk-topbar, .tk-edit-panel { display:none !important; }
+          .ticket-print { border:none; max-width:100%; padding:0; }
         }
-        .tk-col-header {
-          display: grid; grid-template-columns: 1fr 36px 52px 52px;
-          font-weight: 700; font-size: 10px; margin: 4px 0;
-          text-transform: uppercase;
-        }
-        .tk-col-cant, .tk-col-pu, .tk-col-sub { text-align: right; }
-        .tk-item { margin-bottom: 4px; }
-        .tk-item-nombre { font-size: 11px; font-weight: 600; }
-        .tk-item-row {
-          display: grid; grid-template-columns: 1fr 36px 52px 52px;
-          font-size: 11px;
-        }
-        .tk-total-row {
-          display: flex; justify-content: space-between; align-items: baseline;
-          font-weight: 700; font-size: 15px; margin: 4px 0;
-        }
-        .tk-total-monto { font-size: 18px; }
-        .tk-nota  { font-size: 11px; color: #555; margin-top: 4px; }
-        .tk-gracias { text-align: center; font-weight: 700; margin-top: 8px; font-size: 12px; }
       `}</style>
     </div>
   );

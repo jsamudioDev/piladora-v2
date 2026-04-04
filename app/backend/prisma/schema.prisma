@@ -44,9 +44,9 @@ model Producto {
   id                  Int                 @id @default(autoincrement())
   nombre              String
   unidad              String
-  precio              Float               @default(0)   // precio de venta sugerido
-  stockActual         Float               @default(0)
-  stockLocal          Float               @default(0)
+  precio              Float               @default(0)
+  stockActual         Float               @default(0)   // stock en piladora
+  stockLocal          Float               @default(0)   // stock en local
   stockMinimo         Float               @default(0)
   ubicacion           String              @default("piladora")
   categoria           String              @default("grano")
@@ -61,10 +61,10 @@ model Producto {
 model StockMovimiento {
   id         Int      @id @default(autoincrement())
   productoId Int
-  tipo       String
+  tipo       String   // ENTRADA | SALIDA
   cantidad   Float
   motivo     String?
-  ubicacion  String?  // piladora | local — registra en qué stock ocurrió el movimiento
+  ubicacion  String?  // piladora | local — stock afectado por este movimiento
   createdAt  DateTime @default(now())
   producto   Producto @relation(fields: [productoId], references: [id])
 }
@@ -83,9 +83,9 @@ model Venta {
   usuarioId        Int?
   // ─── Facturación ─────────────────────────────────────────────────────────────
   facturaNum       Int?           @unique  // número correlativo de factura
-  clienteRuc       String?                 // RUC o cédula del cliente
-  clienteDireccion String?                 // dirección del cliente para factura
-  aplicaITBMS      Boolean        @default(false) // aplica impuesto del 7%
+  clienteRuc       String?
+  clienteDireccion String?
+  aplicaITBMS      Boolean        @default(false)
   createdAt        DateTime       @default(now())
   detalles         DetalleVenta[]
   usuario          Usuario?       @relation(fields: [usuarioId], references: [id])
@@ -128,13 +128,13 @@ model Pilado {
 model SecadoPulidura {
   id           Int      @id @default(autoincrement())
   operarioId   Int
-  sacosHumedos Float                    // sacos de pulidura húmeda que entran
-  sacosSecs    Float    @default(0)     // sacos de pulidura seca que salen
-  pesoHumedo   Float    @default(63)   // lbs por saco húmedo (configurable)
-  pesoSeco     Float    @default(50)   // lbs por saco seco (configurable)
-  rendimiento  Float    @default(0)    // porcentaje calculado
-  lbsHumedas   Float    @default(0)    // sacosHumedos × pesoHumedo
-  lbsSecas     Float    @default(0)    // sacosSecs × pesoSeco
+  sacosHumedos Float
+  sacosSecs    Float    @default(0)
+  pesoHumedo   Float    @default(63)
+  pesoSeco     Float    @default(50)
+  rendimiento  Float    @default(0)
+  lbsHumedas   Float    @default(0)
+  lbsSecas     Float    @default(0)
   nota         String?
   usuarioId    Int?
   createdAt    DateTime @default(now())
@@ -144,18 +144,20 @@ model SecadoPulidura {
 // ─── MÓDULO: CRÉDITOS ────────────────────────────────────────────────────────
 
 model Credito {
-  id            Int      @id @default(autoincrement())
-  clienteNombre String
-  clienteTel    String?
-  montoTotal    Float
-  montoPagado   Float    @default(0)
-  saldo         Float
-  estado        String   @default("PENDIENTE") // PENDIENTE | PAGADO | VENCIDO
-  nota          String?
-  ventaId       Int?     @unique
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  abonos        Abono[]
+  id               Int       @id @default(autoincrement())
+  clienteNombre    String
+  clienteTel       String?
+  clienteCedula    String?                 // Cédula, pasaporte o RUC del cliente
+  montoTotal       Float
+  montoPagado      Float     @default(0)
+  saldo            Float
+  estado           String    @default("PENDIENTE") // PENDIENTE | PAGADO | VENCIDO
+  nota             String?
+  ventaId          Int?      @unique       // ID de la venta que originó el crédito
+  fechaVencimiento DateTime?              // Fecha límite de pago acordada
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  abonos           Abono[]
 }
 
 model Abono {
@@ -206,7 +208,7 @@ model DetalleDevolucion {
   productoId   Int
   cantidad     Float
   precioUnit   Float
-  ubicacion    String     @default("piladora") // ubicación de la venta original
+  ubicacion    String     @default("piladora")
   devolucion   Devolucion @relation(fields: [devolucionId], references: [id])
   producto     Producto   @relation(fields: [productoId], references: [id])
 }
@@ -216,10 +218,10 @@ model DetalleDevolucion {
 model Bitacora {
   id        Int      @id @default(autoincrement())
   usuarioId Int?
-  nombre    String?                          // nombre del usuario al momento del log
-  modulo    String                           // panel | venta | pilar | stock | dinero | creditos | config | auth | pulidura | devoluciones | traspasos
-  accion    String                           // login | logout | crear | editar | eliminar | abonar | registrar | traspaso | devolucion
-  detalle   String   @db.Text               // JSON o texto libre con detalles
+  nombre    String?
+  modulo    String
+  accion    String
+  detalle   String   @db.Text
   ip        String?
   createdAt DateTime @default(now())
 

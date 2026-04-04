@@ -28,11 +28,18 @@ const parametros = [
   { clave: 'peso_saco_seco',    valor: '50' },
   // ─── Parámetros de facturación ──────────────────────────────────────────────
   { clave: 'nombre_empresa',    valor: 'Piladora San José',      descripcion: 'Nombre comercial de la empresa' },
-  { clave: 'ruc_empresa',       valor: '8-123-456',              descripcion: 'RUC o cédula del negocio' },
+  { clave: 'ruc_empresa',       valor: '8-123-456',              descripcion: 'RUC de la empresa (sin DV)' },
+  { clave: 'dv_empresa',        valor: '00',                     descripcion: 'Dígito verificador (DV) del RUC' },
   { clave: 'direccion_empresa', valor: 'Panamá, Rep. de Panamá', descripcion: 'Dirección física de la empresa' },
   { clave: 'telefono_empresa',  valor: '6000-0000',              descripcion: 'Teléfono de contacto' },
-  { clave: 'itbms_porcentaje',  valor: '7',                      descripcion: 'Porcentaje de ITBMS (impuesto)' },
+  { clave: 'email_empresa',     valor: '',                       descripcion: 'Correo electrónico de la empresa' },
+  { clave: 'itbms_porcentaje',  valor: '7',                      descripcion: 'Porcentaje de ITBMS (impuesto al consumo)' },
   { clave: 'ultimo_num_factura',valor: '0',                      descripcion: 'Último número de factura emitido (auto-incremental)' },
+  // ─── Configuración SMTP para envío de facturas ───────────────────────────
+  { clave: 'smtp_host',         valor: '',                       descripcion: 'Servidor SMTP (ej: smtp.gmail.com)' },
+  { clave: 'smtp_puerto',       valor: '587',                    descripcion: 'Puerto SMTP (587=TLS, 465=SSL)' },
+  { clave: 'smtp_usuario',      valor: '',                       descripcion: 'Usuario o email SMTP' },
+  { clave: 'smtp_pass',         valor: '',                       descripcion: 'Contraseña SMTP (App Password para Gmail)' },
 ];
 
 // ─── Datos de seed: Usuarios ─────────────────────────────────────────────────
