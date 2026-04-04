@@ -6,14 +6,15 @@ const { registrar } = require('../services/bitacoraService');
 // ─── GET /api/stock — listar productos filtrados por rol ─────────────────────
 // ADMIN    → todos los productos
 // OPERARIO → solo productos de la piladora (ubicacion='piladora')
-// VENDEDOR → solo productos del local      (ubicacion='local')
+// VENDEDOR → todos los productos (ve stockLocal; necesita ver todo para movimientos)
 router.get('/', async (req, res) => {
   try {
     const rol = req.usuario.rol;
 
     const where = {};
+    // El OPERARIO solo maneja la planta → filtra por piladora
+    // El VENDEDOR necesita ver todos los productos para registrar entradas al local
     if (rol === 'OPERARIO') where.ubicacion = 'piladora';
-    if (rol === 'VENDEDOR') where.ubicacion = 'local';
 
     const productos = await prisma.producto.findMany({
       where,

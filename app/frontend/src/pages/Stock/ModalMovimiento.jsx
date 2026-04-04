@@ -1,168 +1,263 @@
 // ─── Modal para registrar entradas y salidas de stock ─────────────────────────
-// NUEVO: selector de ubicación (PILADORA / LOCAL) para el ADMIN
-// El stock preview se actualiza según la ubicación seleccionada
+// Mejorado: selector de productos con búsqueda interactiva en lugar de <select>
+// ADMIN puede elegir destino (PILADORA / LOCAL)
+// VENDEDOR siempre registra en LOCAL
+// OPERARIO siempre registra en PILADORA
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
+
+// Íconos por categoría
+const CATEGORIA_ICON = {
+  grano:    '🌾',
+  insumo:   '🧴',
+  empaque:  '📦',
+  servicio: '🔧',
+  otro:     '📋',
+};
 
 export default function ModalMovimiento({ productos, onGuardar, onCerrar }) {
   const { usuario } = useAuth();
-  const esAdmin = usuario?.rol === 'ADMIN';
+  const esAdmin    = usuario?.rol === 'ADMIN';
+  const esVendedor = usuario?.rol === 'VENDEDOR';
 
   // Ubicación por defecto según el rol
-  const ubicDefecto = usuario?.rol === 'VENDEDOR' ? 'local' : 'piladora';
+  const ubicDefecto = esVendedor ? 'local' : 'piladora';
 
-  const [form, setForm] = useState({
-    productoId: productos[0]?.id ?? '',
-    tipo:       'ENTRADA',
-    cantidad:   '',
-    motivo:     '',
-    ubicacion:  ubicDefecto,
-  });
+  const [busqueda,    setBusqueda]    = useState('');
+  const [productoId,  setProductoId]  = useState(null);
+  const [tipo,        setTipo]        = useState('ENTRADA');
+  const [cantidad,    setCantidad]    = useState('');
+  const [motivo,      setMotivo]      = useState('');
+  const [ubicacion,   setUbicacion]   = useState(ubicDefecto);
 
-  function set(key, val) {
-    setForm(prev => ({ ...prev, [key]: val }));
-  }
+  // Productos filtrados por búsqueda
+  const productosFiltrados = useMemo(() => {
+    const term = busqueda.trim().toLowerCase();
+    if (!term) return productos;
+    return productos.filter(p =>
+      p.nombre.toLowerCase().includes(term) ||
+      (p.categoria || '').toLowerCase().includes(term)
+    );
+  }, [productos, busqueda]);
 
-  function handleSubmit(e) {
-    e.preventDefault();
-    if (!form.productoId || !form.cantidad || Number(form.cantidad) <= 0) return;
-    onGuardar({
-      productoId: Number(form.productoId),
-      tipo:       form.tipo,
-      cantidad:   Number(form.cantidad),
-      motivo:     form.motivo || null,
-      ubicacion:  form.ubicacion,
-    });
-  }
-
-  const productoSel = productos.find(p => p.id === Number(form.productoId));
+  const productoSel = useMemo(
+    () => productos.find(p => p.id === productoId),
+    [productos, productoId]
+  );
 
   // Stock disponible según la ubicación seleccionada
   const stockDisponible = productoSel
-    ? (form.ubicacion === 'local' ? productoSel.stockLocal : productoSel.stockActual)
+    ? (ubicacion === 'local' ? productoSel.stockLocal : productoSel.stockActual)
     : 0;
 
   // Stock estimado tras el movimiento
-  const stockEstimado = form.cantidad
-    ? (form.tipo === 'ENTRADA'
-        ? stockDisponible + Number(form.cantidad)
-        : stockDisponible - Number(form.cantidad))
+  const stockEstimado = cantidad
+    ? (tipo === 'ENTRADA'
+        ? stockDisponible + Number(cantidad)
+        : stockDisponible - Number(cantidad))
     : null;
 
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (!productoId || !cantidad || Number(cantidad) <= 0) return;
+    onGuardar({
+      productoId: Number(productoId),
+      tipo,
+      cantidad:  Number(cantidad),
+      motivo:    motivo || null,
+      ubicacion,
+    });
+  }
+
   return (
-    <div className="modal-overlay" onClick={onCerrar}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h3>Registrar movimiento</h3>
-          <button className="modal-close" onClick={onCerrar}>✕</button>
+    <div className="mvm-overlay" onClick={onCerrar}>
+      <div className="mvm-modal" onClick={e => e.stopPropagation()}>
+
+        {/* Encabezado */}
+        <div className="mvm-header">
+          <h3 className="mvm-title">Registrar movimiento</h3>
+          <button className="mvm-close" onClick={onCerrar}>✕</button>
         </div>
 
-        <form className="modal-form" onSubmit={handleSubmit}>
-          {/* Producto */}
-          <label>
-            Producto
-            <select
-              value={form.productoId}
-              onChange={e => set('productoId', e.target.value)}
-              required
-            >
-              {productos.map(p => (
-                <option key={p.id} value={p.id}>{p.nombre}</option>
-              ))}
-            </select>
-          </label>
+        <form className="mvm-form" onSubmit={handleSubmit}>
 
-          {/* Selector de ubicación — solo ADMIN puede elegir */}
-          {esAdmin && (
-            <div>
-              <p className="tipo-label">Destino del movimiento</p>
-              <div className="tipo-toggle">
+          {/* ── Selector de producto con búsqueda ─────────────────────── */}
+          <div className="mvm-section">
+            <p className="mvm-label">Producto</p>
+
+            {/* Buscador */}
+            <div className="mvm-search">
+              <span className="mvm-search-icon">🔍</span>
+              <input
+                className="mvm-search-input"
+                type="text"
+                placeholder="Buscar producto..."
+                value={busqueda}
+                onChange={e => setBusqueda(e.target.value)}
+                autoFocus
+              />
+              {busqueda && (
                 <button
                   type="button"
-                  className={`tipo-btn tipo-btn--piladora${form.ubicacion === 'piladora' ? ' active' : ''}`}
-                  onClick={() => set('ubicacion', 'piladora')}
+                  className="mvm-search-clear"
+                  onClick={() => setBusqueda('')}
+                >✕</button>
+              )}
+            </div>
+
+            {/* Lista de productos */}
+            <div className="mvm-prod-list">
+              {productosFiltrados.length === 0 ? (
+                <div className="mvm-empty">
+                  {busqueda
+                    ? `Sin resultados para "${busqueda}"`
+                    : 'No hay productos disponibles'
+                  }
+                </div>
+              ) : (
+                productosFiltrados.map(p => {
+                  const sel      = productoId === p.id;
+                  const stock    = ubicacion === 'local' ? p.stockLocal : p.stockActual;
+                  const icon     = CATEGORIA_ICON[p.categoria] ?? '📋';
+                  const stockBajo = stock <= 5;
+
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      className={`mvm-prod-item${sel ? ' mvm-prod-item--sel' : ''}`}
+                      onClick={() => {
+                        setProductoId(p.id);
+                        setCantidad('');
+                      }}
+                    >
+                      <span className="mvm-prod-icon">{icon}</span>
+                      <span className="mvm-prod-nombre">{p.nombre}</span>
+                      <span className={`mvm-prod-stock${stockBajo ? ' mvm-prod-stock--low' : ''}`}>
+                        {stock} {p.unidad}
+                      </span>
+                      {sel && <span className="mvm-prod-check">✓</span>}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Nombre del producto seleccionado */}
+            {productoSel && (
+              <div className="mvm-sel-badge">
+                ✅ <strong>{productoSel.nombre}</strong>
+                <span>· {stockDisponible} {productoSel.unidad} disponibles ({ubicacion === 'local' ? 'Local' : 'Piladora'})</span>
+              </div>
+            )}
+          </div>
+
+          {/* ── Destino del movimiento — solo ADMIN ───────────────────── */}
+          {esAdmin && (
+            <div className="mvm-section">
+              <p className="mvm-label">Destino del movimiento</p>
+              <div className="mvm-toggle">
+                <button
+                  type="button"
+                  className={`mvm-toggle-btn mvm-toggle-btn--piladora${ubicacion === 'piladora' ? ' active' : ''}`}
+                  onClick={() => setUbicacion('piladora')}
                 >
                   🏭 Piladora
                   {productoSel && (
-                    <span className="stock-badge">{productoSel.stockActual} {productoSel.unidad}</span>
+                    <span className="mvm-stock-badge">
+                      {productoSel.stockActual} {productoSel.unidad}
+                    </span>
                   )}
                 </button>
                 <button
                   type="button"
-                  className={`tipo-btn tipo-btn--local${form.ubicacion === 'local' ? ' active' : ''}`}
-                  onClick={() => set('ubicacion', 'local')}
+                  className={`mvm-toggle-btn mvm-toggle-btn--local${ubicacion === 'local' ? ' active' : ''}`}
+                  onClick={() => setUbicacion('local')}
                 >
                   🏪 Local
                   {productoSel && (
-                    <span className="stock-badge">{productoSel.stockLocal} {productoSel.unidad}</span>
+                    <span className="mvm-stock-badge">
+                      {productoSel.stockLocal} {productoSel.unidad}
+                    </span>
                   )}
                 </button>
               </div>
             </div>
           )}
 
-          {/* Tipo: Entrada / Salida */}
-          <div>
-            <p className="tipo-label">Tipo de movimiento</p>
-            <div className="tipo-toggle">
+          {/* Etiqueta fija para VENDEDOR y OPERARIO */}
+          {!esAdmin && (
+            <div className="mvm-ubi-fija">
+              {esVendedor ? '🏪 Registrando en Stock Local' : '🏭 Registrando en Piladora'}
+            </div>
+          )}
+
+          {/* ── Tipo: Entrada / Salida ─────────────────────────────────── */}
+          <div className="mvm-section">
+            <p className="mvm-label">Tipo de movimiento</p>
+            <div className="mvm-toggle">
               <button
                 type="button"
-                className={`tipo-btn tipo-btn--entrada${form.tipo === 'ENTRADA' ? ' active' : ''}`}
-                onClick={() => set('tipo', 'ENTRADA')}
+                className={`mvm-toggle-btn mvm-toggle-btn--entrada${tipo === 'ENTRADA' ? ' active' : ''}`}
+                onClick={() => setTipo('ENTRADA')}
               >
                 ↑ Entrada
               </button>
               <button
                 type="button"
-                className={`tipo-btn tipo-btn--salida${form.tipo === 'SALIDA' ? ' active' : ''}`}
-                onClick={() => set('tipo', 'SALIDA')}
+                className={`mvm-toggle-btn mvm-toggle-btn--salida${tipo === 'SALIDA' ? ' active' : ''}`}
+                onClick={() => setTipo('SALIDA')}
               >
                 ↓ Salida
               </button>
             </div>
           </div>
 
-          {/* Cantidad */}
-          <label>
-            Cantidad
+          {/* ── Cantidad ──────────────────────────────────────────────── */}
+          <label className="mvm-field">
+            Cantidad {productoSel && `(${productoSel.unidad})`}
             <input
               type="number" min="0.5" step="0.5"
-              value={form.cantidad}
-              onChange={e => set('cantidad', e.target.value)}
+              className="mvm-input"
+              value={cantidad}
+              onChange={e => setCantidad(e.target.value)}
               placeholder="0"
               required
             />
           </label>
 
-          {/* Motivo */}
-          <label>
+          {/* ── Motivo ────────────────────────────────────────────────── */}
+          <label className="mvm-field">
             Motivo (opcional)
             <input
-              value={form.motivo}
-              onChange={e => set('motivo', e.target.value)}
-              placeholder="Ej: Compra proveedor, Transferencia local..."
+              className="mvm-input"
+              value={motivo}
+              onChange={e => setMotivo(e.target.value)}
+              placeholder="Ej: Compra proveedor, Traspaso al local..."
             />
           </label>
 
-          {/* Preview del resultado */}
-          {productoSel && form.cantidad && (
-            <div className="preview">
-              <div>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                  Stock {form.ubicacion === 'local' ? 'Local' : 'Piladora'} actual
+          {/* ── Preview resultado ─────────────────────────────────────── */}
+          {productoSel && cantidad && (
+            <div className="mvm-preview">
+              <div className="mvm-preview-item">
+                <span className="mvm-preview-lbl">
+                  Stock {ubicacion === 'local' ? 'Local' : 'Piladora'} ahora
                 </span>
-                <strong style={{ display: 'block', fontSize: 16 }}>{stockDisponible} {productoSel.unidad}</strong>
+                <strong className="mvm-preview-val">{stockDisponible} {productoSel.unidad}</strong>
               </div>
-              <span style={{ color: 'var(--text-secondary)', fontSize: 20 }}>→</span>
-              <div>
-                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Después</span>
-                <strong style={{
-                  display: 'block', fontSize: 16,
-                  color: stockEstimado < 0
-                    ? '#f87171'
-                    : form.tipo === 'ENTRADA' ? 'var(--accent-green)' : 'var(--accent-red)',
-                }}>
+              <span className="mvm-preview-arrow">→</span>
+              <div className="mvm-preview-item">
+                <span className="mvm-preview-lbl">Después</span>
+                <strong
+                  className="mvm-preview-val"
+                  style={{
+                    color: stockEstimado < 0
+                      ? '#f87171'
+                      : tipo === 'ENTRADA' ? 'var(--accent-green)' : 'var(--accent-red)',
+                  }}
+                >
                   {stockEstimado} {productoSel.unidad}
                   {stockEstimado < 0 && ' ⚠️'}
                 </strong>
@@ -170,96 +265,198 @@ export default function ModalMovimiento({ productos, onGuardar, onCerrar }) {
             </div>
           )}
 
-          <div className="modal-footer">
-            <button type="button" className="btn-cancel" onClick={onCerrar}>Cancelar</button>
-            <button type="submit" className="btn-save">Registrar</button>
+          {/* ── Botones ───────────────────────────────────────────────── */}
+          <div className="mvm-footer">
+            <button type="button" className="mvm-btn-cancel" onClick={onCerrar}>
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="mvm-btn-save"
+              disabled={!productoId || !cantidad || Number(cantidad) <= 0}
+            >
+              Registrar
+            </button>
           </div>
         </form>
       </div>
 
+      {/* ── Estilos ───────────────────────────────────────────────────── */}
       <style>{`
-        .modal-overlay {
-          position: fixed; inset: 0;
-          background: rgba(0,0,0,0.6);
+        .mvm-overlay {
+          position: fixed; inset: 0; background: rgba(0,0,0,0.65);
           display: flex; align-items: center; justify-content: center;
           z-index: 500; padding: 16px;
         }
-        .modal {
+        .mvm-modal {
           background: var(--bg-card); border: 1px solid var(--border);
-          border-radius: 14px; width: 100%; max-width: 440px;
-          padding: 24px; max-height: 90vh; overflow-y: auto;
+          border-radius: 16px; width: 100%; max-width: 460px;
+          padding: 24px; max-height: 92vh; overflow-y: auto;
+          display: flex; flex-direction: column; gap: 0;
         }
-        .modal-header {
+        .mvm-modal::-webkit-scrollbar { width: 4px; }
+        .mvm-modal::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        /* Encabezado */
+        .mvm-header {
           display: flex; align-items: center; justify-content: space-between;
           margin-bottom: 20px;
         }
-        .modal-header h3 { font-size: 17px; }
-        .modal-close {
+        .mvm-title { font-size: 17px; font-weight: 700; color: var(--text-primary); }
+        .mvm-close {
           background: none; border: none; color: var(--text-secondary);
-          font-size: 18px; cursor: pointer; padding: 4px;
+          font-size: 18px; cursor: pointer; padding: 4px 8px; line-height: 1;
+          border-radius: 6px; transition: background 0.15s;
         }
-        .modal-close:hover { color: var(--text-primary); }
-        .modal-form { display: flex; flex-direction: column; gap: 14px; }
-        .modal-form label {
-          display: flex; flex-direction: column; gap: 6px;
+        .mvm-close:hover { background: var(--bg-base); color: var(--text-primary); }
+
+        /* Form */
+        .mvm-form { display: flex; flex-direction: column; gap: 16px; }
+        .mvm-section { display: flex; flex-direction: column; gap: 8px; }
+        .mvm-label {
+          font-size: 13px; font-weight: 600; color: var(--text-secondary);
+          text-transform: uppercase; letter-spacing: 0.4px; margin: 0;
+        }
+
+        /* Buscador */
+        .mvm-search {
+          display: flex; align-items: center; gap: 8px;
+          background: var(--bg-base); border: 1px solid var(--border);
+          border-radius: 10px; padding: 8px 12px; transition: border-color 0.15s;
+        }
+        .mvm-search:focus-within { border-color: var(--accent-purple); }
+        .mvm-search-icon { font-size: 14px; flex-shrink: 0; }
+        .mvm-search-input {
+          background: none; border: none; outline: none; flex: 1;
+          color: var(--text-primary); font-size: 14px;
+        }
+        .mvm-search-input::placeholder { color: var(--text-secondary); }
+        .mvm-search-clear {
+          background: none; border: none; color: var(--text-secondary);
+          cursor: pointer; font-size: 12px; padding: 2px 5px; line-height: 1;
+        }
+        .mvm-search-clear:hover { color: var(--text-primary); }
+
+        /* Lista de productos */
+        .mvm-prod-list {
+          display: flex; flex-direction: column; gap: 4px;
+          max-height: 200px; overflow-y: auto;
+          border: 1px solid var(--border); border-radius: 10px;
+          padding: 6px;
+          background: var(--bg-base);
+        }
+        .mvm-prod-list::-webkit-scrollbar { width: 4px; }
+        .mvm-prod-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+        .mvm-empty {
+          text-align: center; padding: 20px 12px;
           font-size: 13px; color: var(--text-secondary);
         }
-        .modal-form input,
-        .modal-form select {
-          background: var(--bg-base); border: 1px solid var(--border);
-          border-radius: 8px; padding: 9px 12px;
-          color: var(--text-primary); font-size: 14px; outline: none;
+        .mvm-prod-item {
+          display: flex; align-items: center; gap: 8px;
+          background: none; border: 1px solid transparent;
+          border-radius: 8px; padding: 8px 10px; cursor: pointer;
+          text-align: left; transition: all 0.12s; width: 100%;
         }
-        .modal-form input:focus,
-        .modal-form select:focus { border-color: var(--accent-purple); }
-        .tipo-label { font-size: 13px; color: var(--text-secondary); margin: 0 0 6px; }
-        .tipo-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .tipo-btn {
+        .mvm-prod-item:hover {
+          background: rgba(124,106,247,0.06);
+          border-color: rgba(124,106,247,0.2);
+        }
+        .mvm-prod-item--sel {
+          background: rgba(124,106,247,0.12) !important;
+          border-color: var(--accent-purple) !important;
+        }
+        .mvm-prod-icon   { font-size: 16px; flex-shrink: 0; }
+        .mvm-prod-nombre { flex: 1; font-size: 13px; font-weight: 500; color: var(--text-primary); }
+        .mvm-prod-stock  { font-size: 12px; color: var(--accent-green); font-weight: 600; flex-shrink: 0; }
+        .mvm-prod-stock--low { color: #f87171; }
+        .mvm-prod-check  { font-size: 12px; color: var(--accent-purple); font-weight: 700; flex-shrink: 0; }
+
+        /* Badge producto seleccionado */
+        .mvm-sel-badge {
+          display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+          background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.25);
+          border-radius: 8px; padding: 8px 12px; font-size: 12px; color: var(--text-secondary);
+        }
+        .mvm-sel-badge strong { color: var(--text-primary); }
+
+        /* Toggle (ubicación / tipo) */
+        .mvm-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .mvm-toggle-btn {
           padding: 10px 8px; border-radius: 8px; border: 1px solid var(--border);
           background: none; color: var(--text-secondary); font-size: 13px;
           font-weight: 600; cursor: pointer; transition: all 0.15s;
           display: flex; flex-direction: column; align-items: center; gap: 3px;
         }
-        .tipo-btn--piladora.active {
+        .mvm-toggle-btn--piladora.active {
           background: rgba(124,106,247,0.15); color: var(--accent-purple);
           border-color: var(--accent-purple);
         }
-        .tipo-btn--local.active {
+        .mvm-toggle-btn--local.active {
           background: rgba(251,191,36,0.15); color: #fbbf24;
           border-color: #fbbf24;
         }
-        .tipo-btn--entrada.active {
+        .mvm-toggle-btn--entrada.active {
           background: rgba(74,222,128,0.15); color: var(--accent-green);
           border-color: var(--accent-green);
         }
-        .tipo-btn--salida.active {
+        .mvm-toggle-btn--salida.active {
           background: rgba(248,113,113,0.15); color: var(--accent-red);
           border-color: var(--accent-red);
         }
-        .stock-badge {
+        .mvm-stock-badge {
           font-size: 11px; font-weight: 400; color: var(--text-secondary);
           background: var(--bg-base); border-radius: 10px; padding: 1px 6px;
         }
-        .preview {
-          display: flex; align-items: center; justify-content: space-around;
-          gap: 12px;
+
+        /* Etiqueta ubicación fija */
+        .mvm-ubi-fija {
+          font-size: 13px; font-weight: 600; color: var(--text-secondary);
           background: var(--bg-base); border: 1px solid var(--border);
-          border-radius: 8px; padding: 12px 14px;
+          border-radius: 8px; padding: 9px 12px; text-align: center;
         }
-        .modal-footer { display: flex; gap: 10px; margin-top: 4px; }
-        .btn-cancel {
-          flex: 1; padding: 10px; border-radius: 8px;
+
+        /* Campos de texto */
+        .mvm-field {
+          display: flex; flex-direction: column; gap: 6px;
+          font-size: 13px; color: var(--text-secondary);
+        }
+        .mvm-input {
+          background: var(--bg-base); border: 1px solid var(--border);
+          border-radius: 8px; padding: 9px 12px;
+          color: var(--text-primary); font-size: 14px; outline: none;
+          transition: border-color 0.15s;
+        }
+        .mvm-input:focus { border-color: var(--accent-purple); }
+
+        /* Preview */
+        .mvm-preview {
+          display: flex; align-items: center; justify-content: space-around; gap: 12px;
+          background: var(--bg-base); border: 1px solid var(--border);
+          border-radius: 10px; padding: 12px 16px;
+        }
+        .mvm-preview-item { display: flex; flex-direction: column; gap: 3px; align-items: center; }
+        .mvm-preview-lbl  { font-size: 11px; color: var(--text-secondary); }
+        .mvm-preview-val  { font-size: 18px; font-weight: 700; }
+        .mvm-preview-arrow { font-size: 20px; color: var(--text-secondary); }
+
+        /* Footer */
+        .mvm-footer { display: flex; gap: 10px; margin-top: 4px; }
+        .mvm-btn-cancel {
+          flex: 1; padding: 11px; border-radius: 8px;
           border: 1px solid var(--border); background: none;
           color: var(--text-secondary); font-size: 14px; cursor: pointer;
+          transition: all 0.15s;
         }
-        .btn-cancel:hover { color: var(--text-primary); }
-        .btn-save {
-          flex: 2; padding: 10px; border-radius: 8px;
+        .mvm-btn-cancel:hover { color: var(--text-primary); border-color: var(--text-secondary); }
+        .mvm-btn-save {
+          flex: 2; padding: 11px; border-radius: 8px;
           background: var(--accent-purple); color: #fff;
           border: none; font-size: 14px; font-weight: 600; cursor: pointer;
           transition: opacity 0.15s;
         }
-        .btn-save:hover { opacity: 0.85; }
+        .mvm-btn-save:hover:not(:disabled) { opacity: 0.85; }
+        .mvm-btn-save:disabled { opacity: 0.4; cursor: not-allowed; }
       `}</style>
     </div>
   );
